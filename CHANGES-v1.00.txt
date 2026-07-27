@@ -1,0 +1,11 @@
+EVE Twelve Data Momentum Trader v1.00
+
+- Replaced v4.21's local 7-condition entry decision with a Railway Twelve Data quality engine.
+- Added Twelve Data WebSocket price mechanics and REST M1/M5/M15/H1 context.
+- Added market regime, extension, higher-timeframe and feed-divergence rejection.
+- Added exact scan rejection history.
+- First position is a market scout at quality 80+.
+- Continuation requires quality 88+, stronger persistence/efficiency and local MT5 momentum.
+- Retained first-leg failure, newest-leg sentinel, basket lock and individual protection.
+- Limited default campaign to 4 positions / 0.04 total lots.
+- New Magic Number 2807202601 and prefix EVETD100.

@@ -1,0 +1,5 @@
+Compile only:
+EVE_Twelve_Data_Momentum_Trader_v1.00.mq5
+
+Required result: 0 errors.
+Attach it to ONE XAUUSD M1 chart on a hedging DEMO account.

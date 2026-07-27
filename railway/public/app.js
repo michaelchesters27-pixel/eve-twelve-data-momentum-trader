@@ -1,0 +1,22 @@
+const $=id=>document.getElementById(id);let token=localStorage.getItem('eve_td_token')||'';$('token').value=token;
+const money=n=>`${Number(n)>=0?'$':'-$'}${Math.abs(Number(n)||0).toFixed(2)}`;
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function api(path,options={}){const res=await fetch(path,{...options,headers:{'Content-Type':'application/json','X-Bot-Token':token,...options.headers}});if(!res.ok)throw new Error(`${res.status} ${await res.text()}`);return res.json()}
+function row(k,v){return `<div class="row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`}
+function cls(n){return Number(n)>0?'positive':Number(n)<0?'negative':''}
+function render(s){
+ $('version').textContent=`v${s.version}`;$('mode').textContent=s.mode;$('twelve').textContent=`${s.twelveData.ws} / ${s.twelveData.rest}`;$('twelve-detail').textContent=s.twelveData.lastError||s.twelveData.lastTickAt||'Waiting';
+ $('mt5').textContent=s.mt5.fresh?'ONLINE':'OFFLINE';$('mt5').className=s.mt5.fresh?'positive':'negative';$('mt5-detail').textContent=s.mt5.fresh?`${s.mt5.symbol||''} · ${s.mt5.engineState||''}`:'Waiting for heartbeat';
+ $('auto').textContent=s.control.autonomous&&!s.control.emergency?'ON':'OFF';$('auto').className=s.control.autonomous&&!s.control.emergency?'positive':'negative';
+ const d=s.decision;$('decision').textContent=d.action==='MANAGE'?`${d.direction} MANAGE`:d.action;$('decision').className=d.action==='WAIT'?'waiting':'live';$('reason').textContent=d.reason||'';$('buyq').textContent=Number(d.buyQuality||0).toFixed(0);$('sellq').textContent=Number(d.sellQuality||0).toFixed(0);$('add').textContent=d.addAllowed?'YES':'NO';
+ const p=s.performance;$('baskets').textContent=p.baskets;$('wins').textContent=`${p.wins} wins / ${p.losses} losses`;$('net').textContent=money(p.netProfit);$('net').className=cls(p.netProfit);$('average').textContent=`${money(p.averageBasket)} average`;$('pf').textContent=Number(p.profitFactor).toFixed(2);$('winrate').textContent=`${p.winRate}% win rate`;$('worst').textContent=money(p.worstBasket);$('worst').className=cls(p.worstBasket);$('best').textContent=`Best ${money(p.bestBasket)}`;
+ const c=s.context||{};$('context').innerHTML=row('Regime',c.regime||'WARMING')+row('M1',c.m1?.direction||'—')+row('M5',c.m5?.direction||'—')+row('M15',c.m15?.direction||'—')+row('H1',c.h1?.direction||'—')+row('M1 ATR',c.m1?.atr||'—')+row('M1 extension',c.m1?.extensionAtr!=null?`${c.m1.extensionAtr} ATR`:'—');
+ $('execution').innerHTML=row('Bid / Ask',`${s.mt5.bid||0} / ${s.mt5.ask||0}`)+row('Spread points',s.mt5.spreadPoints||0)+row('MT5 ATR',s.mt5.atrM1||0)+row('Positions',s.mt5.positionCount||0)+row('Pending',s.mt5.pendingCount||0)+row('Side',s.mt5.side||'NONE')+row('Floating P/L',money(s.mt5.floatingProfit||0));
+ $('scans').innerHTML=(s.recentScans||[]).slice(0,80).map(x=>`<tr><td>${esc((x.at||'').replace('T',' ').slice(0,19))}</td><td>${esc(x.decisionAction)} ${esc(x.decisionDirection)}</td><td>${Number(x.buyQuality||0).toFixed(0)}</td><td>${Number(x.sellQuality||0).toFixed(0)}</td><td>${esc(x.regime)}</td><td>${esc(`${x.m5Direction||'—'}/${x.m15Direction||'—'}/${x.h1Direction||'—'}`)}</td><td class="reason">${esc(x.rejectionReason||'TRADE / MANAGE')}</td></tr>`).join('');
+ $('basket-rows').innerHTML=(s.recentBaskets||[]).slice(0,80).map(x=>`<tr><td>${esc(new Date(Number(x.exitTime)||Date.parse(x.receivedAt)).toLocaleString())}</td><td>${esc(x.side)}</td><td>${esc(x.positionsOpened)}</td><td class="${cls(x.netProfit)}">${money(x.netProfit)}</td><td>${money(x.peakBasketProfit)}</td><td>${money(x.profitGiveback)}</td><td class="reason">${esc(x.exitReason)}</td></tr>`).join('');
+}
+async function refresh(){if(!token)return;try{render(await api('/api/state'))}catch(e){$('reason').textContent=e.message}}
+$('connect').onclick=()=>{token=$('token').value.trim();localStorage.setItem('eve_td_token',token);refresh()};
+document.querySelectorAll('[data-action]').forEach(b=>b.onclick=async()=>{if(!confirm(`Send ${b.dataset.action}?`))return;await api('/api/command',{method:'POST',body:JSON.stringify({action:b.dataset.action})});refresh()});
+document.querySelectorAll('[data-export]').forEach(a=>a.onclick=()=>{if(!token)return;window.open(`/api/export/${a.dataset.export}.csv?token=${encodeURIComponent(token)}`,'_blank')});
+setInterval(refresh,3000);refresh();

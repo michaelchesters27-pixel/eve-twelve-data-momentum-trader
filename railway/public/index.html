@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>EVE Twelve Data Momentum Trader</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <div><p class="eyebrow">AUTONOMOUS XAUUSD DEMO TRADER</p><h1>EVE Twelve Data Momentum Trader</h1><p id="subtitle">Railway intelligence · Twelve Data context · MT5 execution</p></div>
+      <div class="auth"><input id="token" type="password" placeholder="BOT_TOKEN" autocomplete="current-password" /><button id="connect">Connect</button></div>
+    </header>
+
+    <section class="hero grid four">
+      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v1.0.0</small></article>
+      <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">WS / REST</small></article>
+      <article class="card"><span>MT5 EA</span><strong id="mt5">OFFLINE</strong><small id="mt5-detail">Waiting for heartbeat</small></article>
+      <article class="card"><span>Autonomous</span><strong id="auto">OFF</strong><small id="mode">DEMO</small></article>
+    </section>
+
+    <section class="decision">
+      <div><p class="eyebrow">LIVE DECISION</p><h2 id="decision">WAIT</h2><p id="reason">Waiting for data</p></div>
+      <div class="quality"><div><span>BUY</span><b id="buyq">0</b></div><div><span>SELL</span><b id="sellq">0</b></div><div><span>ADD</span><b id="add">NO</b></div></div>
+    </section>
+
+    <section class="grid four metrics">
+      <article class="card"><span>Baskets</span><strong id="baskets">0</strong><small id="wins">0 wins</small></article>
+      <article class="card"><span>Net P/L</span><strong id="net">$0.00</strong><small id="average">$0.00 average</small></article>
+      <article class="card"><span>Profit factor</span><strong id="pf">0.00</strong><small id="winrate">0% win rate</small></article>
+      <article class="card"><span>Worst basket</span><strong id="worst">$0.00</strong><small id="best">Best $0.00</small></article>
+    </section>
+
+    <section class="grid two">
+      <article class="panel"><h3>Market context</h3><div id="context" class="rows"></div></article>
+      <article class="panel"><h3>Execution</h3><div id="execution" class="rows"></div></article>
+    </section>
+
+    <section class="controls panel">
+      <h3>Controls</h3>
+      <div class="buttons">
+        <button data-action="ENABLE_AUTO">Enable auto</button><button data-action="DISABLE_AUTO">Disable auto</button>
+        <button data-action="CLOSE_BASKET">Close basket</button><button class="danger" data-action="EMERGENCY_STOP">Emergency stop</button>
+        <button data-action="RESET_EMERGENCY">Reset emergency</button>
+      </div>
+    </section>
+
+    <section class="panel"><div class="section-head"><h3>Recent scans</h3><div class="downloads">
+      <a data-export="scans">Scans CSV</a><a data-export="signals">Signals CSV</a><a data-export="baskets">Baskets CSV</a>
+      <a data-export="legs">Legs CSV</a><a data-export="orders">Orders CSV</a><a data-export="banks">Banking CSV</a>
+    </div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Decision</th><th>BUY</th><th>SELL</th><th>Regime</th><th>M5/M15/H1</th><th>Reason</th></tr></thead><tbody id="scans"></tbody></table></div></section>
+
+    <section class="panel"><h3>Recent baskets</h3><div class="table-wrap"><table><thead><tr><th>Exit</th><th>Side</th><th>Legs</th><th>P/L</th><th>Peak</th><th>Giveback</th><th>Reason</th></tr></thead><tbody id="basket-rows"></tbody></table></div></section>
+  </main>
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+EVE TWELVE DATA MOMENTUM TRADER v1.00
+=====================================
+
+THIS IS A REAL TRADING EA. USE A HEDGING DEMO ACCOUNT ONLY.
+It is not the Momentum Lab and it is not a recorder.
+
+ONE PROJECT ONLY
+----------------
+Suggested GitHub repository:
+EVE-TWELVE-DATA-MOMENTUM-TRADER
+
+Suggested Railway project/service:
+EVE Twelve Data Momentum Trader
+
+RAILWAY
+-------
+1. Upload the complete contents of this ZIP to the GitHub repository.
+2. Connect that repository to one Railway service.
+3. Settings -> Source -> Root Directory: railway
+4. Add the exact variables below.
+5. Settings -> Networking -> Generate Domain.
+
+EXACT RAILWAY VARIABLES
+-----------------------
+BOT_TOKEN=choose-one-long-private-token
+TWELVE_DATA_API_KEY=your-real-twelve-data-key
+TWELVE_DATA_SYMBOL=XAU/USD
+TWELVE_DATA_WS_SYMBOLS=XAU/USD
+TIMEZONE=Europe/London
+DATA_DIR=/data
+AUTO_ENABLED=true
+INITIAL_QUALITY_MIN=80
+CONTINUATION_QUALITY_MIN=88
+SIGNAL_HOLD_MS=650
+SIGNAL_TTL_MS=12000
+SIGNAL_COOLDOWN_MS=20000
+MAX_SPREAD_ATR=0.22
+MAX_FEED_DIVERGENCE_ATR=0.45
+SCAN_LOG_SECONDS=5
+DASHBOARD_ORIGIN=*
+
+Do not add PORT. Railway supplies it.
+No Supabase and no PostgreSQL are used.
+
+HISTORY STORAGE
+---------------
+For history to survive Railway redeploys, add one Railway Volume to this service
+and mount it at:
+/data
+
+The service still runs without the volume, but JSONL/CSV history can reset on redeploy.
+
+MT5
+---
+Compile only:
+mt5/EVE_Twelve_Data_Momentum_Trader_v1.00.mq5
+
+MetaEditor must show 0 errors.
+
+MT5 -> Tools -> Options -> Expert Advisors:
+Tick Allow WebRequest and add the generated Railway URL.
+
+Attach the EA to ONE XAUUSD M1 chart.
+Inputs:
+- InpRailwayBaseUrl = generated Railway URL
+- InpBotToken = exact same BOT_TOKEN used in Railway
+- InpTradeSymbol = your broker's XAUUSD symbol
+
+Keep Algo Trading enabled.
+Do not run another EVE gold EA on the same symbol at the same time.
+
+DASHBOARD
+---------
+Open the Railway domain and enter BOT_TOKEN.
+The dashboard includes Scans, Signals, Baskets, Legs, Orders and Banking CSVs.

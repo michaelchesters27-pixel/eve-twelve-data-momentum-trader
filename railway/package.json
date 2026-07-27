@@ -1,0 +1,13 @@
+{
+  "name": "eve-twelve-data-momentum-trader",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Autonomous XAUUSD demo trader using Twelve Data context on Railway and protected MT5 execution.",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js && node --check src/features.js && node --check src/decision.js && node --check src/twelve-data.js && node --check public/app.js",
+    "test": "NODE_ENV=test node --test src/*.test.js"
+  }
+}
