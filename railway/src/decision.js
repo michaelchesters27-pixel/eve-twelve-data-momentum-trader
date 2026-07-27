@@ -8,7 +8,8 @@ export function assessDirection({ direction, score, feature, context, mt5, twelv
   const oppositeScore = direction === 'BUY' ? score.sell : score.buy;
   const m1 = context?.m1 || {};
   const wsTime = Date.parse(twelveStatus?.lastTickAt || '');
-  const wsFresh = Number.isFinite(wsTime) && now - wsTime <= config.wsStaleMs;
+  const wsAgeMs = Number.isFinite(wsTime) ? Math.max(0, now - wsTime) : null;
+  const wsFresh = wsAgeMs !== null && wsAgeMs <= config.wsStaleMs;
   if (!context?.ready) hardBlocks.push('TWELVE_DATA_CONTEXT_WARMING');
   if (!wsFresh) hardBlocks.push('TWELVE_DATA_PRICE_STALE');
   if (!mt5?.fresh) hardBlocks.push('MT5_OFFLINE_OR_STALE');
@@ -34,7 +35,9 @@ export function assessDirection({ direction, score, feature, context, mt5, twelv
     finite(feature.tickExpansion) >= 1.10;
   return {
     direction, eligible, addAllowed, quality: directionScore.score, oppositeQuality: oppositeScore.score,
-    hardBlocks, reasons, feedDivergenceAtr: round(feedDivergenceAtr, 4), session: sessionForTimestamp(now, config.timezone)
+    hardBlocks, reasons, feedDivergenceAtr: round(feedDivergenceAtr, 4),
+    twelveTickAgeMs: wsAgeMs, twelvePriceFresh: wsFresh,
+    session: sessionForTimestamp(now, config.timezone)
   };
 }
 

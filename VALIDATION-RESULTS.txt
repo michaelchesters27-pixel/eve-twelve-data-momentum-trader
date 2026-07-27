@@ -1,22 +1,14 @@
-EVE TWELVE DATA MOMENTUM TRADER v1.00
-VALIDATION RESULTS
+EVE Twelve Data Momentum Trader v1.01 validation
 
-PASSED
-- Node syntax checks: server, feature engine, decision engine, Twelve Data client and dashboard JavaScript.
-- 5 deterministic Node tests: timeframe context, combined context, directional live features, eligible high-quality decision and spread rejection.
-- Railway local smoke test: /health and authenticated /api/state returned correctly.
-- MQL5 static source validation: balanced braces/parentheses/strings.
-- Every MQL5 StringFormat call has the same number of format fields and supplied values.
-- Trading functions are present: market BUY/SELL scout plus BUY STOP/SELL STOP continuation.
-- Protection functions are present: first-leg failure, newest-leg sentinel, individual SL/TP, break-even, trailing, basket lock, emergency loss and daily loss.
-- History routes are present: scans, signals, orders, legs, baskets, banking and events CSV.
-- No Supabase or PostgreSQL dependency.
+Automated checks included in this project:
+- Node syntax check
+- Node unit tests
+- Python project-source validation
+- MQL lexical brace/string/comment balance
+- MQL StringFormat placeholder count validation
+- Required trading and safety function checks
+- Regression test: WebSocket freshness status is emitted before tick scoring
+- Regression test: stale Twelve Data prices remain a hard block
+- Static check: MT5 decision freshness uses GetTickCount64 local monotonic time
 
-NOT POSSIBLE IN THIS ENVIRONMENT
-- MetaEditor compilation of the MQ5 file.
-- Authenticated live connection to the user's private Twelve Data account.
-- Broker-side order placement test.
-
-REQUIRED BEFORE ATTACHMENT
-Compile mt5/EVE_Twelve_Data_Momentum_Trader_v1.00.mq5 in MetaEditor and require 0 errors.
-Run on a hedging demo account at 0.01 lot.
+MetaEditor is not installed in this build environment. Compile the v1.01 MQ5 file in MetaEditor and require 0 errors before attaching it to MT5.

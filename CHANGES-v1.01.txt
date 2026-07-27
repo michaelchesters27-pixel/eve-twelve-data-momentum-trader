@@ -1,0 +1,14 @@
+EVE Twelve Data Momentum Trader v1.01
+
+CRITICAL FIXES
+1. Twelve Data freshness now uses the Railway server receipt clock.
+2. Every valid WebSocket price publishes the updated freshness status before scoring.
+3. Provider market time is retained separately from transport receipt time.
+4. The dashboard now shows FRESH/STALE, live tick age and the stale threshold.
+5. Scan CSV records Twelve Data tick age and freshness.
+6. MT5 no longer compares Railway UTC epoch time with broker TimeCurrent().
+7. Railway sends remaining decision TTL; MT5 converts it to a local GetTickCount64 deadline.
+8. Network request time is subtracted from the usable decision TTL.
+9. Added regression tests for WebSocket status ordering and stale blocking.
+
+No strategy thresholds were loosened. Stale data remains a hard entry block.

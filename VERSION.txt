@@ -1,5 +1,7 @@
-EVE Twelve Data Momentum Trader v1.00
-Railway version: 1.0.0
-MT5 Magic Number: 2807202601
-Trade prefix: EVETD100
-Strategy: TWELVE_DATA_CONTEXT_SCOUT_SENTINEL_TRADER
+EVE Twelve Data Momentum Trader
+Version: 1.01
+Railway package: 1.0.1
+EA: EVE_Twelve_Data_Momentum_Trader_v1.01.mq5
+Magic number: 2807202601
+Order prefix: EVETD101
+Mode: Autonomous demo trader

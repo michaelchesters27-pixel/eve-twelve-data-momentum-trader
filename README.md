@@ -1,4 +1,8 @@
-# EVE Twelve Data Momentum Trader v1.00
+# EVE Twelve Data Momentum Trader v1.01
+
+## Critical live-integration fixes
+
+This build fixes the false `TWELVE_DATA_PRICE_STALE` block and the MT5 broker-clock/UTC decision-expiry mismatch. Twelve Data freshness is now measured from the Railway server's local receipt time. MT5 converts Railway's remaining decision TTL into a local monotonic `GetTickCount64()` deadline, so broker timezone offsets cannot invalidate fresh signals.
 
 A new autonomous **XAUUSD demo trading system** built from the useful protection logic in EVE v4.21, with the losing entry engine replaced by a Twelve Data decision engine.
 

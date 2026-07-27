@@ -1,5 +1,5 @@
-Compile only:
-EVE_Twelve_Data_Momentum_Trader_v1.00.mq5
+Compile this file in MetaEditor:
 
-Required result: 0 errors.
-Attach it to ONE XAUUSD M1 chart on a hedging DEMO account.
+EVE_Twelve_Data_Momentum_Trader_v1.01.mq5
+
+Require 0 errors. Remove v1.00 from the chart before attaching v1.01. Use the same Railway URL and BOT_TOKEN.

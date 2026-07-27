@@ -5,7 +5,7 @@ async function api(path,options={}){const res=await fetch(path,{...options,heade
 function row(k,v){return `<div class="row"><span>${esc(k)}</span><b>${esc(v)}</b></div>`}
 function cls(n){return Number(n)>0?'positive':Number(n)<0?'negative':''}
 function render(s){
- $('version').textContent=`v${s.version}`;$('mode').textContent=s.mode;$('twelve').textContent=`${s.twelveData.ws} / ${s.twelveData.rest}`;$('twelve-detail').textContent=s.twelveData.lastError||s.twelveData.lastTickAt||'Waiting';
+ $('version').textContent=`v${s.version}`;$('mode').textContent=s.mode;$('twelve').textContent=`${s.twelveData.ws} / ${s.twelveData.rest}`;const tickAge=s.twelveData.tickAgeMs;const tickText=tickAge==null?'Waiting for first price':`${s.twelveData.priceFresh?'FRESH':'STALE'} · tick age ${(tickAge/1000).toFixed(1)}s · limit ${(Number(s.twelveData.staleAfterMs||0)/1000).toFixed(0)}s`;$('twelve-detail').textContent=s.twelveData.lastError||tickText;
  $('mt5').textContent=s.mt5.fresh?'ONLINE':'OFFLINE';$('mt5').className=s.mt5.fresh?'positive':'negative';$('mt5-detail').textContent=s.mt5.fresh?`${s.mt5.symbol||''} · ${s.mt5.engineState||''}`:'Waiting for heartbeat';
  $('auto').textContent=s.control.autonomous&&!s.control.emergency?'ON':'OFF';$('auto').className=s.control.autonomous&&!s.control.emergency?'positive':'negative';
  const d=s.decision;$('decision').textContent=d.action==='MANAGE'?`${d.direction} MANAGE`:d.action;$('decision').className=d.action==='WAIT'?'waiting':'live';$('reason').textContent=d.reason||'';$('buyq').textContent=Number(d.buyQuality||0).toFixed(0);$('sellq').textContent=Number(d.sellQuality||0).toFixed(0);$('add').textContent=d.addAllowed?'YES':'NO';

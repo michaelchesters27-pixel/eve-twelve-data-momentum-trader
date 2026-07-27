@@ -17,7 +17,7 @@ const features = new LiveFeatureEngine();
 const contexts = {};
 const holds = new Map();
 const lastSignalAt = new Map();
-let twelveStatus = { ws: 'WARMING', rest: 'WARMING', lastTickAt: null, lastRestAt: null, lastError: null };
+let twelveStatus = { ws: 'WARMING', rest: 'WARMING', lastTickAt: null, lastMarketTickAt: null, lastRestAt: null, lastError: null };
 let latestFeature = null;
 let latestAssessment = null;
 let lastScanLoggedAt = 0;
@@ -134,7 +134,8 @@ function flattenScan(record) {
     tickExpansion: record.tickExpansion, acceleration: record.acceleration, efficiency: record.efficiency,
     breakoutBuy: record.breakoutBuy, breakoutSell: record.breakoutSell,
     rejectionReason: record.rejectionReason, twelveWs: record.twelveWs, twelveRest: record.twelveRest,
-    mt5Fresh: record.mt5Fresh, feedDivergenceAtr: record.feedDivergenceAtr
+    mt5Fresh: record.mt5Fresh, feedDivergenceAtr: record.feedDivergenceAtr,
+    twelveTickAgeMs: record.twelveTickAgeMs, twelvePriceFresh: record.twelvePriceFresh
   };
 }
 function maybeLogScan(tick, assessment) {
@@ -158,20 +159,27 @@ function maybeLogScan(tick, assessment) {
     buyRejections: [...assessment.buy.hardBlocks, ...assessment.buy.reasons],
     sellRejections: [...assessment.sell.hardBlocks, ...assessment.sell.reasons],
     twelveWs: twelveStatus.ws, twelveRest: twelveStatus.rest, mt5Fresh: broker.fresh,
-    feedDivergenceAtr: best.feedDivergenceAtr
+    feedDivergenceAtr: best.feedDivergenceAtr,
+    twelveTickAgeMs: best.twelveTickAgeMs, twelvePriceFresh: best.twelvePriceFresh
   }, 'scan');
 }
 function onTick(tick) {
   const context = latestContext();
+  const processingNow = finite(tick.receivedAt, Date.now());
+  // Market sequencing uses the provider timestamp; freshness and TTL use this server's clock.
   features.ingest(tick.symbol, tick.price, tick.timestamp);
-  latestFeature = features.snapshot(tick.symbol, context, currentMt5(tick.timestamp));
+  latestFeature = features.snapshot(tick.symbol, context, currentMt5(processingNow));
+  const decisionTick = { ...tick, marketTimestamp: tick.timestamp, timestamp: processingNow };
   if (!latestFeature?.ready) {
-    decision = waitDecision('LIVE_FEATURE_ENGINE_WARMING', null, tick.timestamp);
+    decision = waitDecision('LIVE_FEATURE_ENGINE_WARMING', null, processingNow);
     return;
   }
-  latestAssessment = chooseAssessment({ score: { buy: latestFeature.buy, sell: latestFeature.sell }, feature: latestFeature, context, mt5: currentMt5(tick.timestamp), twelveStatus, now: tick.timestamp });
-  updateDecision(tick, latestAssessment);
-  maybeLogScan(tick, latestAssessment);
+  latestAssessment = chooseAssessment({
+    score: { buy: latestFeature.buy, sell: latestFeature.sell }, feature: latestFeature,
+    context, mt5: currentMt5(processingNow), twelveStatus, now: processingNow
+  });
+  updateDecision(decisionTick, latestAssessment);
+  maybeLogScan(decisionTick, latestAssessment);
 }
 
 const twelve = new TwelveDataClient({
@@ -204,6 +212,9 @@ export function calculatePerformance(rows) {
   };
 }
 function overview() {
+  const tickAt = Date.parse(twelveStatus.lastTickAt || '');
+  const twelveTickAgeMs = Number.isFinite(tickAt) ? Math.max(0, Date.now() - tickAt) : null;
+  const twelvePriceFresh = twelveTickAgeMs !== null && twelveTickAgeMs <= config.wsStaleMs;
   return {
     service: config.serviceName, version: config.version, mode: config.mode,
     control, config: {
@@ -211,7 +222,8 @@ function overview() {
       continuationQualityMin: config.continuationQualityMin, signalHoldMs: config.signalHoldMs,
       maxSpreadAtr: config.maxSpreadAtr, timezone: config.timezone
     },
-    twelveData: twelveStatus, mt5: currentMt5(), decision, feature: latestFeature,
+    twelveData: { ...twelveStatus, tickAgeMs: twelveTickAgeMs, priceFresh: twelvePriceFresh, staleAfterMs: config.wsStaleMs },
+    mt5: currentMt5(), decision, feature: latestFeature,
     assessment: latestAssessment, context: latestContext(),
     performance: calculatePerformance(store.all('baskets')),
     counts: Object.fromEntries(['scans','signals','baskets','legs','orders','banks','events'].map(name => [name, store.all(name).length])),
@@ -275,6 +287,8 @@ function controlText() {
     `decision_sell_quality=${finite(d.sellQuality)}`,
     `decision_add_allowed=${d.addAllowed ? 'true' : 'false'}`,
     `decision_valid_until=${integer(d.validUntil)}`,
+    `decision_ttl_remaining_ms=${Math.max(0, integer(d.validUntil) - Date.now())}`,
+    `server_now_ms=${Date.now()}`,
     `decision_reason=${String(d.reason || '').replace(/[\r\n=]/g, ' ')}`,
     `decision_regime=${d.regime || 'UNKNOWN'}`,
     `decision_m5=${d.m5 || 'UNKNOWN'}`,

@@ -10,4 +10,4 @@ The dashboard provides:
 - **Banking CSV:** basket-lock, first-leg failure, sentinel and opposite-momentum decisions.
 - **Events CSV:** service, controls and error history.
 
-A Railway Volume mounted at `/data` is required for history to survive redeploys.
+A Railway Volume mounted at `/data` is optional for running, but required if history must survive Railway redeploys or restarts.

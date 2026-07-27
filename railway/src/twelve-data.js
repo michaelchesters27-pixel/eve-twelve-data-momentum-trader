@@ -22,7 +22,7 @@ export class TwelveDataClient {
     this.reconnectAttempt = 0;
     this.status = {
       ws: 'OFFLINE', rest: 'WARMING', subscribedSymbols: [], lastTickAt: null,
-      lastRestAt: null, lastError: null, restCalls: 0, wsMessages: 0
+      lastMarketTickAt: null, lastRestAt: null, lastError: null, restCalls: 0, wsMessages: 0
     };
   }
   start() {
@@ -95,10 +95,20 @@ export class TwelveDataClient {
       const symbol = String(message.symbol || message.meta?.symbol || '').trim();
       const price = finite(message.price, NaN);
       if (!symbol || !Number.isFinite(price) || price <= 0) return;
-      const timestamp = normalizeTimestamp(message.timestamp || message.datetime || Date.now());
-      this.status.lastTickAt = new Date(timestamp).toISOString();
+      const receivedAt = Date.now();
+      const marketTimestamp = normalizeTimestamp(message.timestamp || message.datetime || receivedAt);
+      // Freshness is transport freshness, so it must use this server's receipt clock.
+      // The provider timestamp is retained separately for market sequencing.
+      this.status.lastTickAt = new Date(receivedAt).toISOString();
+      this.status.lastMarketTickAt = new Date(marketTimestamp).toISOString();
       this.status.ws = 'CONNECTED';
-      this.onTick({ source: 'TWELVE_DATA_WS', symbol, price, timestamp, raw: message });
+      this.status.lastError = null;
+      // Publish the new timestamp before onTick scores the decision.
+      this.emitStatus();
+      this.onTick({
+        source: 'TWELVE_DATA_WS', symbol, price,
+        timestamp: marketTimestamp, receivedAt, raw: message
+      });
       return;
     }
     if (message.status === 'error' || Number(message.code) >= 400) {

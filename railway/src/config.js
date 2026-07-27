@@ -18,7 +18,7 @@ function listEnv(name, fallback = []) {
 }
 
 export const config = Object.freeze({
-  version: '1.0.0',
+  version: '1.0.1',
   serviceName: 'EVE Twelve Data Momentum Trader',
   mode: 'AUTONOMOUS_DEMO_TRADER',
   port: numEnv('PORT', 3000, 1, 65535),

@@ -8,3 +8,5 @@ const mt5={fresh:true,bid:3999.98,ask:4000.02,atrM1:2,algoAllowed:true,terminalC
 const twelveStatus={lastTickAt:new Date().toISOString()};
 test('high quality aligned burst becomes eligible and allows continuation',()=>{const a=chooseAssessment({score,feature,context,mt5,twelveStatus,now:Date.now()});assert.equal(a.best.direction,'BUY');assert.equal(a.best.eligible,true);assert.equal(a.best.addAllowed,true);});
 test('wide spread blocks the burst',()=>{const a=chooseAssessment({score,feature:{...feature,spreadAtr:.5},context,mt5,twelveStatus,now:Date.now()});assert.equal(a.buy.eligible,false);assert.ok(a.buy.hardBlocks.some(x=>x.startsWith('SPREAD_')));});
+
+test('stale Twelve Data receipt timestamp blocks entry',()=>{const now=Date.now();const a=chooseAssessment({score,feature,context,mt5,twelveStatus:{lastTickAt:new Date(now-20_000).toISOString()},now});assert.equal(a.buy.eligible,false);assert.ok(a.buy.hardBlocks.includes('TWELVE_DATA_PRICE_STALE'));assert.equal(a.buy.twelvePriceFresh,false);assert.ok(a.buy.twelveTickAgeMs>=20_000);});

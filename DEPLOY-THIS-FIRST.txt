@@ -1,4 +1,16 @@
-EVE TWELVE DATA MOMENTUM TRADER v1.00
+EVE TWELVE DATA MOMENTUM TRADER v1.01 — CRITICAL FIX BUILD
+================================================================
+
+UPDATING THE EXISTING v1.00 DEPLOYMENT
+--------------------------------------
+1. Replace every file in the existing GitHub repository with this full project's contents.
+2. Commit the replacement. Railway will redeploy the same service.
+3. Do not change the existing Railway variables.
+4. Open the dashboard and confirm Twelve Data shows FRESH with a live tick age below the configured limit.
+5. Remove v1.00 from the MT5 chart. Compile and attach v1.01 using the same Railway URL and BOT_TOKEN.
+6. Do not run v1.00 and v1.01 together because they use the same Magic Number.
+
+EVE TWELVE DATA MOMENTUM TRADER v1.01
 =====================================
 
 THIS IS A REAL TRADING EA. USE A HEDGING DEMO ACCOUNT ONLY.
@@ -53,7 +65,7 @@ The service still runs without the volume, but JSONL/CSV history can reset on re
 MT5
 ---
 Compile only:
-mt5/EVE_Twelve_Data_Momentum_Trader_v1.00.mq5
+mt5/EVE_Twelve_Data_Momentum_Trader_v1.01.mq5
 
 MetaEditor must show 0 errors.
 

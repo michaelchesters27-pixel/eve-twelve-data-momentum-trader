@@ -1,24 +1,31 @@
 from pathlib import Path
 import re, sys
 root=Path(__file__).resolve().parents[1]
-ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.00.mq5'
+ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.01.mq5'
 server=root/'railway/src/server.js'
 config=root/'railway/src/config.js'
 text=ea.read_text(encoding='utf-8')
 errors=[]
 required=[
- '#property version   "1.00"','2807202601','EVETD100','PlaceInitialScout','remote_decision_quality',
+ '#property version   "1.01"','2807202601','EVETD101','PlaceInitialScout','remote_decision_quality',
  'TWELVE_DATA_CONTEXT_SCOUT_SENTINEL_TRADER','InpUseFirstLegFailureExit','InpCloseBasketOnNewestLegSL',
  'InpUseBasketProfitLock','trade.Buy(','trade.Sell(','trade.BuyStop(','trade.SellStop(',
- '/api/ea/heartbeat','/api/ea/basket','/api/ea/leg','/api/ea/order','/api/ea/bank'
+ '/api/ea/heartbeat','/api/ea/basket','/api/ea/leg','/api/ea/order','/api/ea/bank',
+ 'remote_decision_local_valid_until_ms','decision_ttl_remaining_ms','GetTickCount64()'
 ]
 for item in required:
     if item not in text: errors.append(f'Missing EA element: {item}')
-for forbidden in ['EVE421','2707202643','version":"4.21']:
+for forbidden in ['EVE421','2707202643','version":"4.21','\\"version\\":\\"1.00\\"','TimeCurrent() * 1000;\n   return now_ms <= remote_decision_valid_until']:
     if forbidden in text: errors.append(f'Stale EA identity: {forbidden}')
 js=server.read_text(encoding='utf-8')
-for item in ['TwelveDataClient','chooseAssessment','/api/ea/control','api\\/export','calculatePerformance','scans','signals','baskets']:
+for item in ['TwelveDataClient','chooseAssessment','/api/ea/control','api\\/export','calculatePerformance','scans','signals','baskets','decision_ttl_remaining_ms','server_now_ms','tickAgeMs']:
     if item not in js: errors.append(f'Missing Railway element: {item}')
+td=(root/'railway/src/twelve-data.js').read_text(encoding='utf-8')
+for item in ['receivedAt = Date.now()','lastMarketTickAt','this.emitStatus()','receivedAt, raw: message']:
+    if item not in td: errors.append(f'Missing Twelve Data freshness fix: {item}')
+price_block=td[td.find('const receivedAt = Date.now()'):td.find('if (message.status ===', td.find('const receivedAt = Date.now()'))]
+if not price_block or price_block.find('this.emitStatus()') < 0 or price_block.find('this.onTick({') < 0 or price_block.find('this.emitStatus()') > price_block.find('this.onTick({'):
+    errors.append('Twelve Data status must be emitted before onTick scoring')
 for forbidden in ['SUPABASE_','DATABASE_URL','postgres']:
     if forbidden.lower() in (js+config.read_text()).lower(): errors.append(f'Unexpected database dependency: {forbidden}')
 
