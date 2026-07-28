@@ -876,7 +876,7 @@ bool ScoutHasProvenContinuation()
 
    MqlTick tick;
    if(!SymbolInfoTick(trade_symbol, tick)) return false;
-   double atr = MathMax(validation_atr, CurrentATR());
+   double atr = first_leg_entry_atr > 0.0 ? first_leg_entry_atr : (momentum.atr > 0.0 ? momentum.atr : CurrentATR());
    if(atr <= 0.0) return false;
    double favourable = campaign_side == "BUY"
       ? tick.bid - first_leg_entry_price

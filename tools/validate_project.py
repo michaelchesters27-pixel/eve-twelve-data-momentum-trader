@@ -20,7 +20,7 @@ required=[
 ]
 for item in required:
     if item not in text: errors.append(f'Missing EA element: {item}')
-for forbidden in ['EVE421','2707202643','#property version   "1.01"','EVETD101','2807202601','TimeCurrent() * 1000;\n   return now_ms <= remote_decision_valid_until']:
+for forbidden in ['EVE421','2707202643','#property version   "1.01"','EVETD101','2807202601','TimeCurrent() * 1000;\n   return now_ms <= remote_decision_valid_until','MathMax(validation_atr, CurrentATR())']:
     if forbidden in text: errors.append(f'Stale EA identity: {forbidden}')
 
 js=server.read_text(encoding='utf-8')

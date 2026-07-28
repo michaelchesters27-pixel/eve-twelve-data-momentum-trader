@@ -19,3 +19,7 @@ DATA
 12. Overlapping REST requests are prevented.
 13. v102 history namespace starts a clean forward-test sample.
 14. Scan CSV includes breakout distance and score components.
+
+Compile correction:
+- Fixed undeclared identifier validation_atr in ScoutHasProvenContinuation().
+- Continuation proof now correctly uses the scout-entry ATR, then live momentum ATR, then CurrentATR() as fallback.
