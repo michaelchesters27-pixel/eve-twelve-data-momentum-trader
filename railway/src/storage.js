@@ -3,19 +3,21 @@ import path from 'node:path';
 import { nowIso, uid } from './utils.js';
 
 export class JsonlStore {
-  constructor(dataDir) {
+  constructor(dataDir, namespace = '') {
     this.dataDir = dataDir;
+    this.namespace = String(namespace || '').trim().replace(/[^a-zA-Z0-9_-]/g, '');
+    this.prefix = this.namespace ? `${this.namespace}-` : '';
     fs.mkdirSync(dataDir, { recursive: true });
     this.definitions = {
-      scans: { file: 'scans.jsonl', limit: 100_000 },
-      signals: { file: 'signals.jsonl', limit: 20_000 },
-      baskets: { file: 'baskets.jsonl', limit: 20_000 },
-      legs: { file: 'legs.jsonl', limit: 100_000 },
-      orders: { file: 'orders.jsonl', limit: 100_000 },
-      banks: { file: 'banks.jsonl', limit: 50_000 },
-      events: { file: 'events.jsonl', limit: 20_000 },
-      contexts: { file: 'contexts.jsonl', limit: 20_000 },
-      mt5: { file: 'mt5-heartbeats.jsonl', limit: 20_000 }
+      scans: { file: `${this.prefix}scans.jsonl`, limit: 100_000 },
+      signals: { file: `${this.prefix}signals.jsonl`, limit: 20_000 },
+      baskets: { file: `${this.prefix}baskets.jsonl`, limit: 20_000 },
+      legs: { file: `${this.prefix}legs.jsonl`, limit: 100_000 },
+      orders: { file: `${this.prefix}orders.jsonl`, limit: 100_000 },
+      banks: { file: `${this.prefix}banks.jsonl`, limit: 50_000 },
+      events: { file: `${this.prefix}events.jsonl`, limit: 20_000 },
+      contexts: { file: `${this.prefix}contexts.jsonl`, limit: 20_000 },
+      mt5: { file: `${this.prefix}mt5-heartbeats.jsonl`, limit: 20_000 }
     };
     this.collections = {};
     for (const [name, definition] of Object.entries(this.definitions)) this.collections[name] = this.load(definition);

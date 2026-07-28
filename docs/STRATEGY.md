@@ -1,36 +1,31 @@
-# Strategy specification
+# v1.02 strategy specification
 
-## Core principle
+## Mandatory eligibility gate
 
-The previous bot detected speed but did not reliably determine whether the movement deserved risk. This version separates market intelligence from broker execution.
+A scout can only be issued when all of the following are true:
 
-## Railway intelligence gate
+- Twelve Data and MT5 are fresh and connected.
+- Spread and feed divergence are inside limits.
+- A live BUY or SELL break exists beyond an older 10-second reference window.
+- Breakout distance is at least 0.015 M1 ATR.
+- Post-breakout persistence is at least 0.68.
+- Movement efficiency is at least 0.48.
+- Tick expansion is at least 1.10.
+- Quality is at least 80 and leads the opposite direction by at least 8.
+- The complete eligibility state remains present for at least 900 ms.
+- M1 is not in compression, high-volatility chop or exhaustion.
+- M15 and H1 are not both against the direction.
 
-A trade is rejected when any hard block is active, including:
+No score can override a missing breakout.
 
-- Twelve Data context warming or stale
-- MT5 heartbeat stale, disconnected or Algo Trading blocked
-- broker spread too large relative to ATR
-- Twelve Data and MT5 prices diverging beyond tolerance
-- high-volatility chop
-- exhaustion or excessive extension
-- both M15 and H1 against the direction
+## Compression
 
-If no hard block exists, the directional quality score must reach 80 and lead the opposite score by at least 8 points. The signal must hold for 650 ms.
+No entry is permitted while the latest completed M1 context is classified as COMPRESSION. Context is calculated only from completed candles. Once a candle closes outside prior structure with expansion, the regime can become BREAKOUT and live confirmation may then qualify.
 
-## Scout and continuation
+## Continuation
 
-- First entry: immediate 0.01-lot market scout.
-- Additional entries: pending continuation stop orders.
-- Default maximum: 4 positions and 0.04 total lots.
-- Additional legs require quality 88+, add permission from Railway and supporting MT5 tick momentum.
+Continuation still requires Railway quality 88+, strong follow-through and local MT5 momentum. In addition, the scout must first move at least 0.10 ATR in profit.
 
-## Exit management
+## Protection
 
-- Initial SL: 1.05 M1 ATR.
-- Initial TP: 1.30 M1 ATR.
-- First-leg failure: 0.25 ATR adverse movement before leg 2.
-- Break-even: begins at 0.40 ATR.
-- Trailing: begins at 0.65 ATR with 0.30 ATR distance.
-- Newest-leg SL: closes remaining campaign.
-- Basket lock: activates after a meaningful peak and protects 40% of the peak, after estimated commission reserve.
+First-leg failure, individual SL/TP, break-even, trailing, newest-leg sentinel, basket lock, daily loss and emergency loss controls are unchanged.

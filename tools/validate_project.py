@@ -1,38 +1,54 @@
 from pathlib import Path
 import re, sys
 root=Path(__file__).resolve().parents[1]
-ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.01.mq5'
+ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.02.mq5'
 server=root/'railway/src/server.js'
 config=root/'railway/src/config.js'
-text=ea.read_text(encoding='utf-8')
+features=root/'railway/src/features.js'
+decision=root/'railway/src/decision.js'
+tdfile=root/'railway/src/twelve-data.js'
 errors=[]
+if not ea.exists(): errors.append('Missing v1.02 EA file')
+text=ea.read_text(encoding='utf-8') if ea.exists() else ''
 required=[
- '#property version   "1.01"','2807202601','EVETD101','PlaceInitialScout','remote_decision_quality',
- 'TWELVE_DATA_CONTEXT_SCOUT_SENTINEL_TRADER','InpUseFirstLegFailureExit','InpCloseBasketOnNewestLegSL',
- 'InpUseBasketProfitLock','trade.Buy(','trade.Sell(','trade.BuyStop(','trade.SellStop(',
+ '#property version   "1.02"','2807202602','EVETD102','PlaceInitialScout','remote_decision_quality',
+ 'TWELVE_DATA_CONFIRMED_BREAKOUT_TRADER','InpUseFirstLegFailureExit','InpCloseBasketOnNewestLegSL',
+ 'InpUseBasketProfitLock','InpRequireScoutProfitBeforeAdd','InpScoutProfitBeforeAddATR','ScoutHasProvenContinuation',
+ 'trade.Buy(','trade.Sell(','trade.BuyStop(','trade.SellStop(',
  '/api/ea/heartbeat','/api/ea/basket','/api/ea/leg','/api/ea/order','/api/ea/bank',
  'remote_decision_local_valid_until_ms','decision_ttl_remaining_ms','GetTickCount64()'
 ]
 for item in required:
     if item not in text: errors.append(f'Missing EA element: {item}')
-for forbidden in ['EVE421','2707202643','version":"4.21','\\"version\\":\\"1.00\\"','TimeCurrent() * 1000;\n   return now_ms <= remote_decision_valid_until']:
+for forbidden in ['EVE421','2707202643','#property version   "1.01"','EVETD101','2807202601','TimeCurrent() * 1000;\n   return now_ms <= remote_decision_valid_until']:
     if forbidden in text: errors.append(f'Stale EA identity: {forbidden}')
+
 js=server.read_text(encoding='utf-8')
-for item in ['TwelveDataClient','chooseAssessment','/api/ea/control','api\\/export','calculatePerformance','scans','signals','baskets','decision_ttl_remaining_ms','server_now_ms','tickAgeMs']:
+for item in ['TwelveDataClient','chooseAssessment','/api/ea/control','api\\/export','calculatePerformance','scans','signals','baskets','decision_ttl_remaining_ms','server_now_ms','tickAgeMs','config.dataNamespace','breakoutConfirmMs']:
     if item not in js: errors.append(f'Missing Railway element: {item}')
-td=(root/'railway/src/twelve-data.js').read_text(encoding='utf-8')
-for item in ['receivedAt = Date.now()','lastMarketTickAt','this.emitStatus()','receivedAt, raw: message']:
-    if item not in td: errors.append(f'Missing Twelve Data freshness fix: {item}')
+
+ft=features.read_text(encoding='utf-8')
+for item in ['breakoutLookbackMs','breakoutExcludeMs','breakoutBuyDistanceAtr','BREAKOUT_REQUIRED','Math.min(score, 69)']:
+    if item not in ft: errors.append(f'Missing breakout feature: {item}')
+
+dt=decision.read_text(encoding='utf-8')
+for item in ['NO_CONFIRMED_${direction}_BREAKOUT','COMPRESSION_WAIT_FOR_CLOSED_EXPANSION','POST_BREAKOUT_PERSISTENCE','POST_BREAKOUT_EFFICIENCY','TICK_EXPANSION_']:
+    if item not in dt: errors.append(f'Missing decision gate: {item}')
+
+td=tdfile.read_text(encoding='utf-8')
+for item in ['receivedAt = Date.now()','lastMarketTickAt','this.emitStatus()','receivedAt, raw: message','closedValues','nextClosedBoundaryDelay','this.inFlight','completeBars']:
+    if item not in td: errors.append(f'Missing Twelve Data feature: {item}')
 price_block=td[td.find('const receivedAt = Date.now()'):td.find('if (message.status ===', td.find('const receivedAt = Date.now()'))]
 if not price_block or price_block.find('this.emitStatus()') < 0 or price_block.find('this.onTick({') < 0 or price_block.find('this.emitStatus()') > price_block.find('this.onTick({'):
     errors.append('Twelve Data status must be emitted before onTick scoring')
+
+all_js=js+config.read_text()+ft+dt+td
 for forbidden in ['SUPABASE_','DATABASE_URL','postgres']:
-    if forbidden.lower() in (js+config.read_text()).lower(): errors.append(f'Unexpected database dependency: {forbidden}')
+    if forbidden.lower() in all_js.lower(): errors.append(f'Unexpected database dependency: {forbidden}')
 
 # Balanced braces outside strings and comments.
 def balanced(code):
-    stack=[]; i=0; state='code'
-    pairs={'}':'{',')':'(',']':'['}
+    stack=[]; i=0; state='code'; pairs={'}':'{',')':'(',']':'['}
     while i<len(code):
         c=code[i]; n=code[i+1] if i+1<len(code) else ''
         if state=='code':
@@ -80,7 +96,7 @@ def matching_paren(code,start):
 def split_args(body):
     args=[]; start=0; depth=0; state='code'; i=0
     while i<len(body):
-        c=body[i]; n=body[i+1] if i+1<len(body) else ''
+        c=body[i]
         if state=='code':
             if c=='"': state='str'
             elif c in '([{': depth+=1

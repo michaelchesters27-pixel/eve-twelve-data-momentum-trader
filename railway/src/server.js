@@ -12,7 +12,7 @@ import { TwelveDataClient } from './twelve-data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
-const store = new JsonlStore(config.dataDir);
+const store = new JsonlStore(config.dataDir, config.dataNamespace);
 const features = new LiveFeatureEngine();
 const contexts = {};
 const holds = new Map();
@@ -57,7 +57,7 @@ function issueDecision(assessment, tick) {
     buyQuality: assessment.buy.quality, sellQuality: assessment.sell.quality,
     addAllowed: best.addAllowed, createdAt: new Date(tick.timestamp).toISOString(),
     validUntil: tick.timestamp + config.signalTtlMs,
-    reason: `${best.direction} QUALITY ${best.quality}/100 - TWELVE DATA CONTEXT CONFIRMED`,
+    reason: `${best.direction} QUALITY ${best.quality}/100 - CONFIRMED BREAKOUT HELD ${Math.max(config.signalHoldMs, config.breakoutConfirmMs)}MS`,
     rejectionReasons: [], regime: latestContext().regime,
     m5: latestContext().m5?.direction || 'UNKNOWN', m15: latestContext().m15?.direction || 'UNKNOWN',
     h1: latestContext().h1?.direction || 'UNKNOWN'
@@ -103,14 +103,15 @@ function updateDecision(tick, assessment) {
   const opposite = best.direction === 'BUY' ? 'SELL' : 'BUY';
   holds.delete(opposite);
   const previous = holds.get(best.direction);
+  const requiredHoldMs = Math.max(config.signalHoldMs, config.breakoutConfirmMs);
   if (!previous) {
     holds.set(best.direction, { startedAt: now, bestQuality: best.quality });
-    decision = waitDecision(`${best.direction}_HOLDING_${config.signalHoldMs}MS`, assessment, now);
+    decision = waitDecision(`${best.direction}_BREAKOUT_HOLDING_${requiredHoldMs}MS`, assessment, now);
     return;
   }
   previous.bestQuality = Math.max(previous.bestQuality, best.quality);
   const cooldownReady = now - (lastSignalAt.get(best.direction) || 0) >= config.signalCooldownMs;
-  if (now - previous.startedAt < config.signalHoldMs) {
+  if (now - previous.startedAt < requiredHoldMs) {
     decision = waitDecision(`${best.direction}_SIGNAL_HOLD_NOT_COMPLETE`, assessment, now);
     return;
   }
@@ -133,9 +134,15 @@ function flattenScan(record) {
     velocity1Atr: record.velocity1Atr, velocity3Atr: record.velocity3Atr, velocity10Atr: record.velocity10Atr,
     tickExpansion: record.tickExpansion, acceleration: record.acceleration, efficiency: record.efficiency,
     breakoutBuy: record.breakoutBuy, breakoutSell: record.breakoutSell,
+    breakoutBuyDistanceAtr: record.breakoutBuyDistanceAtr, breakoutSellDistanceAtr: record.breakoutSellDistanceAtr,
+    breakoutConfirmed: record.breakoutConfirmed, postBreakoutPersistence: record.postBreakoutPersistence,
     rejectionReason: record.rejectionReason, twelveWs: record.twelveWs, twelveRest: record.twelveRest,
     mt5Fresh: record.mt5Fresh, feedDivergenceAtr: record.feedDivergenceAtr,
-    twelveTickAgeMs: record.twelveTickAgeMs, twelvePriceFresh: record.twelvePriceFresh
+    twelveTickAgeMs: record.twelveTickAgeMs, twelvePriceFresh: record.twelvePriceFresh,
+    buyVelocityScore: record.buyVelocityScore, buyPersistenceScore: record.buyPersistenceScore,
+    buyBreakoutScore: record.buyBreakoutScore, buyEfficiencyScore: record.buyEfficiencyScore,
+    sellVelocityScore: record.sellVelocityScore, sellPersistenceScore: record.sellPersistenceScore,
+    sellBreakoutScore: record.sellBreakoutScore, sellEfficiencyScore: record.sellEfficiencyScore
   };
 }
 function maybeLogScan(tick, assessment) {
@@ -155,6 +162,12 @@ function maybeLogScan(tick, assessment) {
     velocity10Atr: latestFeature?.velocity10Atr, tickExpansion: latestFeature?.tickExpansion,
     acceleration: latestFeature?.acceleration, efficiency: latestFeature?.efficiency,
     breakoutBuy: latestFeature?.breakoutBuy, breakoutSell: latestFeature?.breakoutSell,
+    breakoutBuyDistanceAtr: latestFeature?.breakoutBuyDistanceAtr, breakoutSellDistanceAtr: latestFeature?.breakoutSellDistanceAtr,
+    breakoutConfirmed: best.breakoutConfirmed, postBreakoutPersistence: best.postBreakoutPersistence,
+    buyVelocityScore: latestFeature?.buy?.components?.velocity, buyPersistenceScore: latestFeature?.buy?.components?.persistence,
+    buyBreakoutScore: latestFeature?.buy?.components?.breakout, buyEfficiencyScore: latestFeature?.buy?.components?.efficiency,
+    sellVelocityScore: latestFeature?.sell?.components?.velocity, sellPersistenceScore: latestFeature?.sell?.components?.persistence,
+    sellBreakoutScore: latestFeature?.sell?.components?.breakout, sellEfficiencyScore: latestFeature?.sell?.components?.efficiency,
     rejectionReason: decision.action === 'WAIT' ? decision.reason : '',
     buyRejections: [...assessment.buy.hardBlocks, ...assessment.buy.reasons],
     sellRejections: [...assessment.sell.hardBlocks, ...assessment.sell.reasons],
@@ -192,7 +205,7 @@ const twelve = new TwelveDataClient({
   onStatus: status => { twelveStatus = status; }
 });
 twelve.start();
-store.event('startup', `${config.serviceName} started`, { version: config.version, symbol: config.primarySymbol, mode: config.mode });
+store.event('startup', `${config.serviceName} started`, { version: config.version, symbol: config.primarySymbol, mode: config.mode, dataNamespace: config.dataNamespace });
 
 export function calculatePerformance(rows) {
   const closed = rows.filter(row => String(row.status || 'CLOSED').toUpperCase() === 'CLOSED');
@@ -220,7 +233,9 @@ function overview() {
     control, config: {
       primarySymbol: config.primarySymbol, initialQualityMin: config.initialQualityMin,
       continuationQualityMin: config.continuationQualityMin, signalHoldMs: config.signalHoldMs,
-      maxSpreadAtr: config.maxSpreadAtr, timezone: config.timezone
+      maxSpreadAtr: config.maxSpreadAtr, timezone: config.timezone, dataNamespace: config.dataNamespace,
+      breakoutConfirmMs: config.breakoutConfirmMs, breakoutMinAtr: config.breakoutMinAtr,
+      breakoutPersistenceMin: config.breakoutPersistenceMin, breakoutEfficiencyMin: config.breakoutEfficiencyMin
     },
     twelveData: { ...twelveStatus, tickAgeMs: twelveTickAgeMs, priceFresh: twelvePriceFresh, staleAfterMs: config.wsStaleMs },
     mt5: currentMt5(), decision, feature: latestFeature,

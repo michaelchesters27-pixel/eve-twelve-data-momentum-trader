@@ -69,6 +69,9 @@ export function computeTimeframeContext(rawBars, interval) {
   const previousHigh = Math.max(...previous20.map(bar => bar.high));
   const previousLow = Math.min(...previous20.map(bar => bar.low));
   const breakout = latest.close > previousHigh ? 'UP' : latest.close < previousLow ? 'DOWN' : 'NONE';
+  const breakoutDistanceAtr = atr14 > 0
+    ? breakout === 'UP' ? (latest.close - previousHigh) / atr14 : breakout === 'DOWN' ? (previousLow - latest.close) / atr14 : 0
+    : 0;
   const range = Math.max(latest.high - latest.low, Number.EPSILON);
   const body = latest.close - latest.open;
   const upperWick = latest.high - Math.max(latest.open, latest.close);
@@ -78,11 +81,17 @@ export function computeTimeframeContext(rawBars, interval) {
   const medianRecentRange = median(ranges.slice(-10));
   const medianBaseRange = median(ranges.slice(-60, -10)) || medianRecentRange;
   const compression = medianBaseRange > 0 ? medianRecentRange / medianBaseRange : 1;
+  const priorRecentRange = median(ranges.slice(-11, -1));
+  const priorBaseRange = median(ranges.slice(-61, -11)) || priorRecentRange;
+  const priorCompression = priorBaseRange > 0 ? priorRecentRange / priorBaseRange : 1;
+  const rangeExpansion = medianRecentRange > 0 ? range / medianRecentRange : 1;
   const extensionAtr = atr14 > 0 ? Math.abs(latest.close - ema20) / atr14 : 0;
   const directionalEfficiency = Math.abs(latest.close - bars.at(-8).close) / Math.max(ranges.slice(-8).reduce((sum, value) => sum + value, 0), Number.EPSILON);
+  const closedBreakoutConfirmed = breakout !== 'NONE' && breakoutDistanceAtr >= 0.02 && bodyFraction >= 0.50 && rangeExpansion >= 1.05;
+  const compressionRelease = priorCompression < 0.72 && closedBreakoutConfirmed && rangeExpansion >= 1.20;
   let regime = 'RANGE';
   if (compression < 0.68) regime = 'COMPRESSION';
-  if (breakout !== 'NONE' && atrExpansion > 1.05) regime = 'BREAKOUT';
+  if (closedBreakoutConfirmed && atrExpansion > 1.02) regime = 'BREAKOUT';
   else if (Math.abs(trendScore) > 0.9 && directionalEfficiency > 0.42) regime = 'TREND';
   else if (atrExpansion > 1.45 && directionalEfficiency < 0.32) regime = 'HIGH_VOL_CHOP';
   if (extensionAtr > 2.2 && bodyFraction < 0.45) regime = 'EXHAUSTION_RISK';
@@ -98,8 +107,13 @@ export function computeTimeframeContext(rawBars, interval) {
     trendScore: round(trendScore, 4),
     direction,
     breakout,
+    breakoutDistanceAtr: round(breakoutDistanceAtr, 4),
+    closedBreakoutConfirmed,
+    compressionRelease,
     regime,
     compression: round(compression, 4),
+    priorCompression: round(priorCompression, 4),
+    rangeExpansion: round(rangeExpansion, 4),
     extensionAtr: round(extensionAtr, 4),
     directionalEfficiency: round(directionalEfficiency, 4),
     candle: {

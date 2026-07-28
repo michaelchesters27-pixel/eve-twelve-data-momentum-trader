@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TwelveDataClient } from './twelve-data.js';
+import { TwelveDataClient, closedValues } from './twelve-data.js';
 
 test('price message publishes a fresh receipt timestamp before scoring the tick', () => {
   const order = [];
@@ -19,4 +19,15 @@ test('price message publishes a fresh receipt timestamp before scoring the tick'
   assert.equal(Date.parse(status.lastMarketTickAt), 1_700_000_000_000);
   assert.equal(tick.receivedAt, receipt);
   assert.equal(tick.timestamp, 1_700_000_000_000);
+});
+
+test('REST context excludes the still-forming candle',()=>{
+  const now=Date.parse('2026-07-28T10:00:30Z');
+  const values=[
+    {datetime:'2026-07-28 09:58:00'},
+    {datetime:'2026-07-28 09:59:00'},
+    {datetime:'2026-07-28 10:00:00'}
+  ];
+  const closed=closedValues(values,60_000,now,1_500);
+  assert.deepEqual(closed.map(x=>x.datetime),['2026-07-28 09:58:00','2026-07-28 09:59:00']);
 });

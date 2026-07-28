@@ -3,11 +3,23 @@ import { computeTimeframeContext } from './context.js';
 import { finite, normalizeTimestamp, nowIso } from './utils.js';
 
 const INTERVALS = [
-  { interval: '1min', everyMs: 60_000, outputsize: 240, stagger: 4_000 },
-  { interval: '5min', everyMs: 300_000, outputsize: 240, stagger: 12_000 },
-  { interval: '15min', everyMs: 900_000, outputsize: 240, stagger: 22_000 },
-  { interval: '1h', everyMs: 3_600_000, outputsize: 240, stagger: 32_000 }
+  { interval: '1min', unitMs: 60_000, outputsize: 120, closeDelayMs: 2_500, bootstrapDelayMs: 1_000 },
+  { interval: '5min', unitMs: 300_000, outputsize: 120, closeDelayMs: 5_000, bootstrapDelayMs: 6_000 },
+  { interval: '15min', unitMs: 900_000, outputsize: 120, closeDelayMs: 8_000, bootstrapDelayMs: 11_000 },
+  { interval: '1h', unitMs: 3_600_000, outputsize: 120, closeDelayMs: 12_000, bootstrapDelayMs: 16_000 }
 ];
+
+export function closedValues(values, intervalMs, now = Date.now(), graceMs = 1_500) {
+  return (values || []).filter(row => {
+    const openTime = Date.parse(String(row.datetime || '').replace(' ', 'T') + (String(row.datetime || '').includes('Z') ? '' : 'Z'));
+    return Number.isFinite(openTime) && openTime + intervalMs <= now - graceMs;
+  });
+}
+
+function nextClosedBoundaryDelay(unitMs, closeDelayMs, now = Date.now()) {
+  const next = Math.floor(now / unitMs) * unitMs + unitMs + closeDelayMs;
+  return Math.max(250, next - now);
+}
 
 export class TwelveDataClient {
   constructor({ onTick = () => {}, onContext = () => {}, onStatus = () => {} } = {}) {
@@ -17,12 +29,14 @@ export class TwelveDataClient {
     this.ws = null;
     this.heartbeatTimer = null;
     this.reconnectTimer = null;
-    this.pollTimers = [];
+    this.pollTimers = new Map();
+    this.inFlight = new Set();
     this.stopped = false;
     this.reconnectAttempt = 0;
     this.status = {
       ws: 'OFFLINE', rest: 'WARMING', subscribedSymbols: [], lastTickAt: null,
-      lastMarketTickAt: null, lastRestAt: null, lastError: null, restCalls: 0, wsMessages: 0
+      lastMarketTickAt: null, lastRestAt: null, lastError: null, restCalls: 0, wsMessages: 0,
+      restCallsByInterval: {}, nextRefreshAt: {}
     };
   }
   start() {
@@ -40,10 +54,11 @@ export class TwelveDataClient {
     this.stopped = true;
     clearTimeout(this.reconnectTimer);
     clearInterval(this.heartbeatTimer);
-    this.pollTimers.forEach(clearInterval);
+    for (const timer of this.pollTimers.values()) clearTimeout(timer);
+    this.pollTimers.clear();
     try { this.ws?.close(); } catch {}
   }
-  emitStatus() { this.onStatus({ ...this.status }); }
+  emitStatus() { this.onStatus({ ...this.status, restCallsByInterval: { ...this.status.restCallsByInterval }, nextRefreshAt: { ...this.status.nextRefreshAt } }); }
   connectWs() {
     if (this.stopped) return;
     clearTimeout(this.reconnectTimer);
@@ -97,18 +112,12 @@ export class TwelveDataClient {
       if (!symbol || !Number.isFinite(price) || price <= 0) return;
       const receivedAt = Date.now();
       const marketTimestamp = normalizeTimestamp(message.timestamp || message.datetime || receivedAt);
-      // Freshness is transport freshness, so it must use this server's receipt clock.
-      // The provider timestamp is retained separately for market sequencing.
       this.status.lastTickAt = new Date(receivedAt).toISOString();
       this.status.lastMarketTickAt = new Date(marketTimestamp).toISOString();
       this.status.ws = 'CONNECTED';
       this.status.lastError = null;
-      // Publish the new timestamp before onTick scores the decision.
       this.emitStatus();
-      this.onTick({
-        source: 'TWELVE_DATA_WS', symbol, price,
-        timestamp: marketTimestamp, receivedAt, raw: message
-      });
+      this.onTick({ source: 'TWELVE_DATA_WS', symbol, price, timestamp: marketTimestamp, receivedAt, raw: message });
       return;
     }
     if (message.status === 'error' || Number(message.code) >= 400) {
@@ -118,14 +127,28 @@ export class TwelveDataClient {
   }
   startRestPolling() {
     for (const task of INTERVALS) {
-      setTimeout(() => {
-        void this.fetchContext(config.primarySymbol, task);
-        const timer = setInterval(() => void this.fetchContext(config.primarySymbol, task), task.everyMs);
-        this.pollTimers.push(timer);
-      }, task.stagger);
+      const bootstrap = setTimeout(async () => {
+        await this.fetchContext(config.primarySymbol, task);
+        this.scheduleNext(task);
+      }, task.bootstrapDelayMs);
+      this.pollTimers.set(`bootstrap:${task.interval}`, bootstrap);
     }
   }
+  scheduleNext(task) {
+    if (this.stopped) return;
+    const delay = nextClosedBoundaryDelay(task.unitMs, task.closeDelayMs);
+    this.status.nextRefreshAt[task.interval] = new Date(Date.now() + delay).toISOString();
+    this.emitStatus();
+    const timer = setTimeout(async () => {
+      await this.fetchContext(config.primarySymbol, task);
+      this.scheduleNext(task);
+    }, delay);
+    this.pollTimers.set(task.interval, timer);
+  }
   async fetchContext(symbol, task) {
+    const key = `${symbol}:${task.interval}`;
+    if (this.inFlight.has(key)) return;
+    this.inFlight.add(key);
     const params = new URLSearchParams({
       symbol, interval: task.interval, outputsize: String(task.outputsize), order: 'asc', timezone: 'UTC'
     });
@@ -136,17 +159,25 @@ export class TwelveDataClient {
         signal: AbortSignal.timeout(12_000)
       });
       this.status.restCalls++;
+      this.status.restCallsByInterval[task.interval] = (this.status.restCallsByInterval[task.interval] || 0) + 1;
       const body = await response.json();
       if (!response.ok || body.status === 'error') throw new Error(body.message || `HTTP ${response.status}`);
-      const context = computeTimeframeContext(body.values || [], task.interval);
+      const completeBars = closedValues(body.values || [], task.unitMs);
+      const context = computeTimeframeContext(completeBars, task.interval);
       this.status.rest = context.ready ? 'READY' : 'WARMING';
       this.status.lastRestAt = nowIso();
-      this.onContext({ source: 'TWELVE_DATA_REST', symbol, interval: task.interval, context, meta: body.meta || null, capturedAt: nowIso() });
+      this.status.lastError = null;
+      this.onContext({
+        source: 'TWELVE_DATA_REST', symbol, interval: task.interval, context,
+        meta: body.meta || null, capturedAt: nowIso(), completeBars: completeBars.length
+      });
       this.emitStatus();
     } catch (error) {
       this.status.rest = 'ERROR';
       this.status.lastError = `${task.interval}: ${error.message}`;
       this.emitStatus();
+    } finally {
+      this.inFlight.delete(key);
     }
   }
 }
