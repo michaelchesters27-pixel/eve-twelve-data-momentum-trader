@@ -1,43 +1,60 @@
-EVE TWELVE DATA MOMENTUM TRADER v1.04
-====================================
+EVE BULLET STORM TRADER v2.00
+============================
 
-THIS IS A REAL TRADING EA. USE A HEDGING DEMO ACCOUNT ONLY.
+THIS REPLACES THE CURRENT GITHUB / RAILWAY PROJECT.
+USE A HEDGING DEMO ACCOUNT ONLY.
 
-UPDATE THE EXISTING GITHUB REPOSITORY
--------------------------------------
-1. Replace the complete contents of the current GitHub repository with this project.
-2. Commit the replacement. Railway redeploys the existing service.
-3. Do not change the existing Railway variables.
-4. v1.04 starts a clean statistics sample under the built-in v104 data namespace.
-5. Remove v1.03 from the MT5 chart.
-6. Compile and attach mt5/EVE_Twelve_Data_Momentum_Trader_v1.04.mq5.
-7. Use the same Railway URL and BOT_TOKEN.
+GITHUB + RAILWAY
+----------------
+1. Open the existing GitHub repository: eve-twelve-data-momentum-trader.
+2. Delete the existing repository contents.
+3. Upload the COMPLETE contents of this ZIP to the repository root.
+4. Commit the replacement.
+5. Railway redeploys the existing service and keeps the same domain.
+6. Do not create a second GitHub repository or Railway project.
+7. Do not change the existing Railway variables.
 
-NO NEW RAILWAY VARIABLES ARE REQUIRED
--------------------------------------
-Existing variables remain valid. Optional overrides are available but should be left at defaults initially:
-BREAKOUT_CONFIRM_MS=900
-BREAKOUT_LOOKBACK_MS=10000
-BREAKOUT_EXCLUDE_MS=1200
-BREAKOUT_MIN_ATR=0.015
-BREAKOUT_PERSISTENCE_MIN=0.68
-BREAKOUT_EFFICIENCY_MIN=0.48
-BREAKOUT_TICK_EXPANSION_MIN=1.10
-DATA_NAMESPACE=v104
+The existing variables remain valid:
+- BOT_TOKEN
+- TWELVE_DATA_API_KEY
+- TWELVE_DATA_SYMBOL
+- TWELVE_DATA_WS_SYMBOLS
+- TIMEZONE
+- DATA_DIR
+- AUTO_ENABLED
+- SCAN_LOG_SECONDS
+- DASHBOARD_ORIGIN
+
+Old quality/threshold variables can remain in Railway. v2.00 ignores them for trade permission.
+The built-in clean history namespace is v200. An optional BULLET_DATA_NAMESPACE override exists but is not required.
 
 MT5
 ---
-MetaEditor must show 0 errors.
-Attach v1.04 to ONE XAUUSD M1 chart on a hedging demo account.
-Keep Algo Trading enabled.
-Do not run v1.03 and v1.04 together.
+1. Remove v1.04 from the chart.
+2. Copy mt5/EVE_Twelve_Data_Bullet_Storm_v2.00.mq5 into MQL5/Experts.
+3. Open it in MetaEditor and press Compile.
+4. Require 0 errors before continuing.
+5. Attach it to ONE XAUUSD M1 chart on a HEDGING DEMO account.
+6. Use the same Railway URL and BOT_TOKEN.
+7. Tick Allow Algo Trading.
+8. Keep the Railway domain in MT5 WebRequest permissions.
+9. Do not run v1.04 and v2.00 together.
 
-WHAT CHANGED
-------------
-- No confirmed breakout = no trade.
-- Compression = no trade until a closed expansion.
-- Breakout must persist for at least 900 ms.
-- Scout must be at least 0.10 ATR favourable before any continuation order.
-- REST data refreshes only after candle closes and excludes the live forming candle.
+EXPECTED DASHBOARD STATE
+------------------------
+When flat and active, the dashboard should show:
+TWO-SIDED BRACKET ARMED
+POSITIONS 0
+PENDING 2
 
-V1.04 WARMUP FIX: no new Railway variables are required. The dashboard will record diagnostic WAIT scans while the feature engine warms.
+When bullet 1 fires:
+BULLET 1 - REVERSAL STILL ARMED
+
+When bullet 2 in the same direction fires:
+BULLET CAMPAIGN LOCKED
+
+NO QUALITY FILTER
+-----------------
+Twelve Data is telemetry and history only.
+There is no 80-point score, confirmed-breakout gate, session gate or M5/M15/H1 permission filter.
+Only hard execution and capital protection can block new bullets.

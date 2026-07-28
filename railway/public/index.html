@@ -3,26 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>EVE Twelve Data Momentum Trader</title>
+  <title>EVE Bullet Storm Trader</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <main class="shell">
     <header>
-      <div><p class="eyebrow">AUTONOMOUS XAUUSD DEMO TRADER</p><h1>EVE Twelve Data Momentum Trader</h1><p id="subtitle">Railway intelligence · Twelve Data context · MT5 execution</p></div>
+      <div><p class="eyebrow">AGGRESSIVE XAUUSD DEMO ENGINE</p><h1>EVE Bullet Storm Trader</h1><p id="subtitle">Two-sided M1 bracket · equal bullets · newest-leg fallback · Twelve Data telemetry</p></div>
       <div class="auth"><input id="token" type="password" placeholder="BOT_TOKEN" autocomplete="current-password" /><button id="connect">Connect</button></div>
     </header>
 
     <section class="hero grid four">
-      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v1.0.4</small></article>
-      <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">WS / REST</small></article>
+      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.0.0</small></article>
+      <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">Telemetry stream</small></article>
       <article class="card"><span>MT5 EA</span><strong id="mt5">OFFLINE</strong><small id="mt5-detail">Waiting for heartbeat</small></article>
       <article class="card"><span>Autonomous</span><strong id="auto">OFF</strong><small id="mode">DEMO</small></article>
     </section>
 
     <section class="decision">
-      <div><p class="eyebrow">LIVE DECISION</p><h2 id="decision">WAIT</h2><p id="reason">Waiting for data</p></div>
-      <div class="quality"><div><span>BUY</span><b id="buyq">0</b></div><div><span>SELL</span><b id="sellq">0</b></div><div><span>ADD</span><b id="add">NO</b></div></div>
+      <div><p class="eyebrow">LIVE BULLET ENGINE</p><h2 id="engine-state">WAITING FOR MT5</h2><p id="reason">No quality score. MT5 arms both directions and price chooses.</p></div>
+      <div class="quality"><div><span>POSITIONS</span><b id="positions">0</b></div><div><span>PENDING</span><b id="pending">0</b></div><div><span>LOCKED</span><b id="locked">NO</b></div></div>
     </section>
 
     <section class="grid four metrics">
@@ -33,25 +33,25 @@
     </section>
 
     <section class="grid two">
-      <article class="panel"><h3>Market context</h3><div id="context" class="rows"></div></article>
-      <article class="panel"><h3>Execution</h3><div id="execution" class="rows"></div></article>
+      <article class="panel"><h3>Twelve Data telemetry</h3><div id="telemetry" class="rows"></div></article>
+      <article class="panel"><h3>MT5 bullet campaign</h3><div id="execution" class="rows"></div></article>
     </section>
 
     <section class="controls panel">
       <h3>Controls</h3>
       <div class="buttons">
         <button data-action="ENABLE_AUTO">Enable auto</button><button data-action="DISABLE_AUTO">Disable auto</button>
-        <button data-action="CLOSE_BASKET">Close basket</button><button class="danger" data-action="EMERGENCY_STOP">Emergency stop</button>
-        <button data-action="RESET_EMERGENCY">Reset emergency</button>
+        <button data-action="REBUILD_BRACKET">Rebuild bracket</button><button data-action="CLOSE_BASKET">Close basket</button>
+        <button class="danger" data-action="EMERGENCY_STOP">Emergency stop</button><button data-action="RESET_EMERGENCY">Reset emergency</button>
       </div>
     </section>
 
-    <section class="panel"><div class="section-head"><h3>Recent scans</h3><div class="downloads">
-      <a data-export="scans">Scans CSV</a><a data-export="signals">Signals CSV</a><a data-export="baskets">Baskets CSV</a>
-      <a data-export="legs">Legs CSV</a><a data-export="orders">Orders CSV</a><a data-export="banks">Banking CSV</a>
-    </div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Decision</th><th>BUY</th><th>SELL</th><th>Regime</th><th>M5/M15/H1</th><th>Reason</th></tr></thead><tbody id="scans"></tbody></table></div></section>
+    <section class="panel"><div class="section-head"><h3>Recent live records</h3><div class="downloads">
+      <a data-export="scans">Scans CSV</a><a data-export="signals">Signals CSV</a><a data-export="baskets">Baskets CSV</a><a data-export="legs">Legs CSV</a>
+      <a data-export="orders">Orders CSV</a><a data-export="banks">Banking CSV</a>
+    </div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>Direction / state</th><th>1s speed</th><th>3s speed</th><th>Positions</th><th>Pending</th><th>Event</th></tr></thead><tbody id="scans"></tbody></table></div></section>
 
-    <section class="panel"><h3>Recent baskets</h3><div class="table-wrap"><table><thead><tr><th>Exit</th><th>Side</th><th>Legs</th><th>P/L</th><th>Peak</th><th>Giveback</th><th>Reason</th></tr></thead><tbody id="basket-rows"></tbody></table></div></section>
+    <section class="panel"><h3>Recent baskets</h3><div class="table-wrap"><table><thead><tr><th>Exit</th><th>Side</th><th>Bullets</th><th>P/L</th><th>Peak</th><th>Giveback</th><th>Reason</th></tr></thead><tbody id="basket-rows"></tbody></table></div></section>
   </main>
   <script src="/app.js"></script>
 </body>

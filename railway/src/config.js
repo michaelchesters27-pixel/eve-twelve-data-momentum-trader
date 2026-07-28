@@ -18,40 +18,25 @@ function listEnv(name, fallback = []) {
 }
 
 export const config = Object.freeze({
-  version: '1.0.4',
-  serviceName: 'EVE Twelve Data Momentum Trader',
-  mode: 'AUTONOMOUS_DEMO_TRADER',
+  version: '2.0.0',
+  serviceName: 'EVE Bullet Storm Trader',
+  mode: 'AGGRESSIVE_TWO_SIDED_BULLET_ENGINE_DEMO',
   port: numEnv('PORT', 3000, 1, 65535),
   botToken: String(process.env.BOT_TOKEN || 'CHANGE-ME').trim(),
   dashboardOrigin: String(process.env.DASHBOARD_ORIGIN || '*').trim(),
   dataDir: String(process.env.DATA_DIR || path.join(__dirname, '..', 'data')).trim(),
-  // v1.04 intentionally starts a clean forward-test sample while leaving older files untouched.
-  dataNamespace: String(process.env.DATA_NAMESPACE || 'v104').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'v104',
+  dataNamespace: String(process.env.BULLET_DATA_NAMESPACE || 'v200').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'v200',
   timezone: String(process.env.TIMEZONE || 'Europe/London').trim(),
   autonomousAtStart: boolEnv('AUTO_ENABLED', true),
   twelveDataApiKey: String(process.env.TWELVE_DATA_API_KEY || '').trim(),
   primarySymbol: String(process.env.TWELVE_DATA_SYMBOL || 'XAU/USD').trim(),
   wsSymbols: listEnv('TWELVE_DATA_WS_SYMBOLS', []),
-  initialQualityMin: numEnv('INITIAL_QUALITY_MIN', 80, 1, 100),
-  continuationQualityMin: numEnv('CONTINUATION_QUALITY_MIN', 88, 1, 100),
-  signalHoldMs: numEnv('SIGNAL_HOLD_MS', 650, 0, 10_000),
-  breakoutConfirmMs: numEnv('BREAKOUT_CONFIRM_MS', 900, 250, 10_000),
-  breakoutLookbackMs: numEnv('BREAKOUT_LOOKBACK_MS', 10_000, 3_000, 60_000),
-  breakoutExcludeMs: numEnv('BREAKOUT_EXCLUDE_MS', 1_200, 300, 5_000),
-  featureWarmMinTicks: numEnv('FEATURE_WARM_MIN_TICKS', 4, 3, 50),
-  featureWarmMinHistoryMs: numEnv('FEATURE_WARM_MIN_HISTORY_MS', 1_500, 250, 30_000),
-  breakoutReferenceMinTicks: numEnv('BREAKOUT_REFERENCE_MIN_TICKS', 3, 2, 20),
-  breakoutMinAtr: numEnv('BREAKOUT_MIN_ATR', 0.015, 0.001, 0.50),
-  breakoutPersistenceMin: numEnv('BREAKOUT_PERSISTENCE_MIN', 0.68, 0.50, 0.98),
-  breakoutEfficiencyMin: numEnv('BREAKOUT_EFFICIENCY_MIN', 0.48, 0.10, 0.95),
-  breakoutTickExpansionMin: numEnv('BREAKOUT_TICK_EXPANSION_MIN', 1.10, 0.50, 5.00),
-  signalTtlMs: numEnv('SIGNAL_TTL_MS', 12_000, 2_000, 120_000),
-  signalCooldownMs: numEnv('SIGNAL_COOLDOWN_MS', 20_000, 0, 600_000),
-  maxSpreadAtr: numEnv('MAX_SPREAD_ATR', 0.22, 0.01, 2),
-  maxFeedDivergenceAtr: numEnv('MAX_FEED_DIVERGENCE_ATR', 0.45, 0.05, 5),
-  scanLogSeconds: numEnv('SCAN_LOG_SECONDS', 5, 1, 60),
+  scanLogSeconds: numEnv('SCAN_LOG_SECONDS', 2, 1, 60),
   mt5OfflineMs: numEnv('MT5_OFFLINE_MS', 15_000, 3_000, 300_000),
-  wsStaleMs: numEnv('WS_STALE_MS', 8_000, 2_000, 60_000)
+  wsStaleMs: numEnv('WS_STALE_MS', 8_000, 2_000, 60_000),
+  // Live feature settings are telemetry only. They never grant or refuse an MT5 trade.
+  featureWarmMinTicks: numEnv('FEATURE_WARM_MIN_TICKS', 4, 3, 50),
+  featureWarmMinHistoryMs: numEnv('FEATURE_WARM_MIN_HISTORY_MS', 1_500, 250, 30_000)
 });
 
 export function allWsSymbols() {

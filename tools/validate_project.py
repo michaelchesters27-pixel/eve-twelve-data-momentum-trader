@@ -1,52 +1,64 @@
 from pathlib import Path
-import re, sys
-root=Path(__file__).resolve().parents[1]
-ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.04.mq5'
-server=root/'railway/src/server.js'
-config=root/'railway/src/config.js'
-features=root/'railway/src/features.js'
-decision=root/'railway/src/decision.js'
-tdfile=root/'railway/src/twelve-data.js'
-errors=[]
-if not ea.exists(): errors.append('Missing v1.04 EA file')
-text=ea.read_text(encoding='utf-8') if ea.exists() else ''
-required=[
- '#property version   "1.04"','2807202604','EVETD104','PlaceInitialScout','remote_decision_quality',
- 'TWELVE_DATA_CONFIRMED_BREAKOUT_TRADER','InpUseFirstLegFailureExit','InpCloseBasketOnNewestLegSL',
- 'InpUseBasketProfitLock','InpRequireScoutProfitBeforeAdd','InpScoutProfitBeforeAddATR','ScoutHasProvenContinuation',
- 'trade.Buy(','trade.Sell(','trade.BuyStop(','trade.SellStop(',
- '/api/ea/heartbeat','/api/ea/basket','/api/ea/leg','/api/ea/order','/api/ea/bank',
- 'remote_decision_local_valid_until_ms','decision_ttl_remaining_ms','GetTickCount64()'
+import re
+import sys
+
+root = Path(__file__).resolve().parents[1]
+ea = root / 'mt5/EVE_Twelve_Data_Bullet_Storm_v2.00.mq5'
+server = root / 'railway/src/server.js'
+config = root / 'railway/src/config.js'
+tdfile = root / 'railway/src/twelve-data.js'
+package = root / 'railway/package.json'
+errors = []
+
+for file in [ea, server, config, tdfile, package, root/'README.md', root/'DEPLOY-THIS-FIRST.txt']:
+    if not file.exists(): errors.append(f'Missing required file: {file.relative_to(root)}')
+
+text = ea.read_text(encoding='utf-8') if ea.exists() else ''
+required_ea = [
+    '#property version   "2.00"', '2807202620', 'EVEB200',
+    'AGGRESSIVE_TWO_SIDED_BULLET_ENGINE', 'ArmFreshTwoSidedBracket',
+    'PlaceBulletStop', 'EnsureCampaignPendings', 'ProcessReversalFlip',
+    'InpLockDirectionAfterSameSideLeg', 'direction_locked', 'direction_leg_count',
+    'campaign_fallback_distance', 'campaign_bullet_spacing', 'NewestFallbackReached',
+    'NEWEST BULLET BROKER SL - CLOSE FULL CAMPAIGN',
+    'HARD BASKET LOSS LIMIT', 'DailyLossBlocked', 'InpMaximumPositions',
+    'InpMaximumTotalLots', 'InpEmergencyBasketLossMoney', 'InpMaximumDailyLossMoney',
+    'trade.BuyStop(', 'trade.SellStop(', 'trade.PositionClose(',
+    '/api/ea/heartbeat', '/api/ea/scan', '/api/ea/signal', '/api/ea/basket',
+    '/api/ea/leg', '/api/ea/order', '/api/ea/bank',
+    'TWO-SIDED BRACKET FIRES WITHOUT QUALITY FILTER',
+    'bool armed = ArmFreshTwoSidedBracket', 'immediate_rearm_pending = !armed',
 ]
-for item in required:
+for item in required_ea:
     if item not in text: errors.append(f'Missing EA element: {item}')
-for forbidden in ['EVE421','2707202643','#property version   "1.01"','EVETD101','2807202601','TimeCurrent() * 1000;\n   return now_ms <= remote_decision_valid_until','MathMax(validation_atr, CurrentATR())']:
-    if forbidden in text: errors.append(f'Stale EA identity: {forbidden}')
 
-js=server.read_text(encoding='utf-8')
-for item in ['TwelveDataClient','chooseAssessment','/api/ea/control','api\\/export','calculatePerformance','scans','signals','baskets','decision_ttl_remaining_ms','server_now_ms','tickAgeMs','config.dataNamespace','breakoutConfirmMs']:
-    if item not in js: errors.append(f'Missing Railway element: {item}')
+for forbidden in [
+    '#property version   "1.04"', 'EVETD104', '2807202604',
+    'TWELVE_DATA_CONFIRMED_BREAKOUT_TRADER', 'remote_decision_quality',
+    'NO_CONFIRMED_BUY_BREAKOUT', 'NO_CONFIRMED_SELL_BREAKOUT'
+]:
+    if forbidden in text: errors.append(f'Stale conservative EA element: {forbidden}')
 
-ft=features.read_text(encoding='utf-8')
-for item in ['breakoutLookbackMs','breakoutExcludeMs','breakoutBuyDistanceAtr','BREAKOUT_REQUIRED','Math.min(score, 69)','breakoutReferenceReady','historySpanMs','featureWarmMinTicks']:
-    if item not in ft: errors.append(f'Missing breakout feature: {item}')
+# Confirm NewEntriesAllowed only contains hard operating/risk checks, not momentum/quality permission.
+match = re.search(r'bool\s+NewEntriesAllowed\s*\(\s*\)\s*\{(?P<body>.*?)\n\}', text, re.S)
+if not match:
+    errors.append('Could not inspect NewEntriesAllowed')
+else:
+    body = match.group('body')
+    for forbidden in ['momentum.', 'buyScore', 'sellScore', 'quality', 'M15', 'H1', 'breakout']:
+        if forbidden.lower() in body.lower(): errors.append(f'Entry permission still uses conservative filter: {forbidden}')
 
-dt=decision.read_text(encoding='utf-8')
-for item in ['NO_CONFIRMED_${direction}_BREAKOUT','BREAKOUT_REFERENCE_WARMING','COMPRESSION_WAIT_FOR_CLOSED_EXPANSION','POST_BREAKOUT_PERSISTENCE','POST_BREAKOUT_EFFICIENCY','TICK_EXPANSION_']:
-    if item not in dt: errors.append(f'Missing decision gate: {item}')
+# Inputs referenced must be declared.
+declared = set(re.findall(r'\binput\s+(?:group\s+"[^"]*"|(?:\w+\s+)?(Inp\w+))', text))
+declared.discard('')
+refs = set(re.findall(r'\b(Inp\w+)\b', text))
+for name in sorted(refs - declared): errors.append(f'Undefined input reference: {name}')
 
-td=tdfile.read_text(encoding='utf-8')
-for item in ['receivedAt = Date.now()','lastMarketTickAt','this.emitStatus()','receivedAt, raw: message','closedValues','nextClosedBoundaryDelay','this.inFlight','completeBars']:
-    if item not in td: errors.append(f'Missing Twelve Data feature: {item}')
-price_block=td[td.find('const receivedAt = Date.now()'):td.find('if (message.status ===', td.find('const receivedAt = Date.now()'))]
-if not price_block or price_block.find('this.emitStatus()') < 0 or price_block.find('this.onTick({') < 0 or price_block.find('this.emitStatus()') > price_block.find('this.onTick({'):
-    errors.append('Twelve Data status must be emitted before onTick scoring')
+# No duplicate function definitions.
+funcs = re.findall(r'^\s*(?:bool|void|int|long|ulong|double|string|datetime|MomentumSnapshot)\s+(\w+)\s*\(', text, re.M)
+for name in sorted({x for x in funcs if funcs.count(x) > 1}): errors.append(f'Duplicate function definition: {name}')
 
-all_js=js+config.read_text()+ft+dt+td
-for forbidden in ['SUPABASE_','DATABASE_URL','postgres']:
-    if forbidden.lower() in all_js.lower(): errors.append(f'Unexpected database dependency: {forbidden}')
-
-# Balanced braces outside strings and comments.
+# Balanced braces/parentheses outside comments and strings.
 def balanced(code):
     stack=[]; i=0; state='code'; pairs={'}':'{',')':'(',']':'['}
     while i<len(code):
@@ -67,10 +79,11 @@ def balanced(code):
             if c=='"': state='code'
         i+=1
     return not stack and state in ('code','line'), f'stack={stack[-5:]} state={state}'
+
 ok,msg=balanced(text)
 if not ok: errors.append(f'EA lexical balance failed: {msg}')
 
-# StringFormat argument count check.
+# StringFormat placeholder/argument count.
 def matching_paren(code,start):
     depth=0; state='code'; i=start
     while i<len(code):
@@ -109,17 +122,41 @@ def split_args(body):
     args.append(body[start:].strip())
     return args
 
-for m in re.finditer(r'\bStringFormat\s*\(',text):
+for m in re.finditer(r'\bStringFormat\s*\(', text):
     openpos=text.find('(',m.start()); close=matching_paren(text,openpos)
-    if close<0: errors.append(f'Unclosed StringFormat line {text.count(chr(10),0,m.start())+1}'); continue
+    if close<0:
+        errors.append(f'Unclosed StringFormat line {text.count(chr(10),0,m.start())+1}')
+        continue
     args=split_args(text[openpos+1:close])
     if not args or not args[0].lstrip().startswith('"'): continue
-    fmt=args[0]
-    specs=re.findall(r'%(?!%)(?:[-+0 #]*\d*(?:\.\d+)?(?:I64)?[diuoxXfFeEgGcs])',fmt)
+    specs=re.findall(r'%(?!%)(?:[-+0 #]*\d*(?:\.\d+)?(?:I64)?[diuoxXfFeEgGcs])',args[0])
     if len(specs)!=len(args)-1:
         line=text.count('\n',0,m.start())+1
         errors.append(f'StringFormat line {line}: {len(specs)} formats but {len(args)-1} values')
 
+js = server.read_text(encoding='utf-8') if server.exists() else ''
+cfg = config.read_text(encoding='utf-8') if config.exists() else ''
+td = tdfile.read_text(encoding='utf-8') if tdfile.exists() else ''
+required_server = [
+    'EVE Bullet Storm Trader', 'AGGRESSIVE TWO-SIDED BULLET ENGINE',
+    "signal: 'signals'", '/api/ea/control', '/api/ea/heartbeat',
+    '/api/ea/${route}', 'eve-bullet-storm-${collection}.csv',
+    'MT5 TWO-SIDED BULLET ENGINE CONTROLS ENTRIES',
+    'Twelve Data is telemetry only. MT5 bullet geometry controls entries.'
+]
+all_server = js + cfg + td
+for item in required_server:
+    if item not in all_server: errors.append(f'Missing Railway element: {item}')
+for item in ["version: '2.0.0'", "mode: 'AGGRESSIVE_TWO_SIDED_BULLET_ENGINE_DEMO'", "BULLET_DATA_NAMESPACE || 'v200'"]:
+    if item not in cfg: errors.append(f'Missing v2 config: {item}')
+for forbidden in ['chooseAssessment', "from './decision.js'", 'INITIAL_QUALITY_MIN']:
+    if forbidden in js: errors.append(f'Old decision engine still active in server: {forbidden}')
+if (root/'railway/src/decision.js').exists(): errors.append('Old decision.js must not be shipped')
+
+for item in ['WebSocket', 'TWELVE_DATA_WS', 'receivedAt = Date.now()', 'startRestPolling', 'closedValues']:
+    if item not in td: errors.append(f'Missing Twelve Data element: {item}')
+
 if errors:
-    print('\n'.join(f'ERROR: {e}' for e in errors)); sys.exit(1)
+    print('\n'.join(f'ERROR: {e}' for e in errors))
+    sys.exit(1)
 print('Project source validation passed.')

@@ -1,17 +1,19 @@
-EVE Twelve Data Momentum Trader v1.04 validation
+EVE Bullet Storm Trader v2.00 validation
 
-- Fixed the scanner remaining indefinitely on LIVE_FEATURE_ENGINE_WARMING.
-- Live feature sequencing now uses Railway receipt time instead of repeated/sparse provider timestamps.
-- Every received WebSocket quote is retained for warmup and microstructure analysis.
-- Warmup diagnostic WAIT scans are recorded instead of silently returning.
-- Breakout reference remains a mandatory trade gate; no confirmed breakout still means no trade.
+- Full project identity changed to v2.00 / Magic 2807202620 / EVEB200.
+- Confirmed-breakout decision engine removed from Railway and MT5 trade permission.
+- Two-sided M1 bracket, same-side continuation, pre-leg-2 reversal and post-leg-2 direction lock are present.
+- One campaign fallback distance is reused for every continuation bullet.
+- Newest bullet broker SL/fallback sets an immediate full-campaign close state.
+- Failed bracket cancellation/rebuild keeps the rearm request active until both orders are restored.
+- Hard maximum positions, maximum total lots, basket loss, daily loss, spread ceiling and emergency stop are present.
+- Signals, scans, orders, legs, baskets, banking and events are exported through Railway.
+- Twelve Data WebSocket and completed-candle telemetry remain active but do not grant/refuse trades.
 - Node syntax checks passed.
-- 14 Node unit tests passed.
-- Tests cover robust received-quote warmup, sparse-feed fallback reference, mandatory breakout, compression blocking, stale data, spread, live breakout detection and exclusion of forming REST candles.
+- Node unit tests passed.
+- Railway server smoke test passed.
 - Python project-source validation passed.
-- MQL lexical balance and StringFormat placeholder checks passed.
-- Static checks confirm the v1.04 EA identity, protected scout/continuation execution and corrected ATR fallback logic.
+- MQL lexical balance, duplicate-function, undefined-input and StringFormat placeholder checks passed.
+- ZIP integrity test passed.
 
-MetaEditor is not installed here. Compile the v1.04 MQ5 file locally and require 0 errors before attaching it to MT5.
-
-MetaEditor compile status: must be confirmed locally with 0 errors and 0 warnings.
+MetaEditor is not installed here. Compile EVE_Twelve_Data_Bullet_Storm_v2.00.mq5 locally and require 0 errors before attaching it to a hedging demo account.

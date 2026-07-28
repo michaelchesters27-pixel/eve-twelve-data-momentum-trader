@@ -1,31 +1,63 @@
-# v1.04 strategy specification
+# v2.00 strategy specification
 
-## Mandatory eligibility gate
+## Flat state
 
-A scout can only be issued when all of the following are true:
+At each new M1 candle, and immediately after a campaign closes, MT5 maintains:
 
-- Twelve Data and MT5 are fresh and connected.
-- Spread and feed divergence are inside limits.
-- A live BUY or SELL break exists beyond an older 10-second reference window.
-- Breakout distance is at least 0.015 M1 ATR.
-- Post-breakout persistence is at least 0.68.
-- Movement efficiency is at least 0.48.
-- Tick expansion is at least 1.10.
-- Quality is at least 80 and leads the opposite direction by at least 8.
-- The complete eligibility state remains present for at least 900 ms.
-- M1 is not in compression, high-volatility chop or exhaustion.
-- M15 and H1 are not both against the direction.
+- one BUY STOP above current Ask;
+- one SELL STOP below current Bid;
+- a broker-side fallback SL on both orders.
 
-No score can override a missing breakout.
+The bracket is refreshed while flat. There is no predictive score required before arming it.
 
-## Compression
+## Bullet 1
 
-No entry is permitted while the latest completed M1 context is classified as COMPRESSION. Context is calculated only from completed candles. Once a candle closes outside prior structure with expansion, the regime can become BREAKOUT and live confirmation may then qualify.
+The first triggered stop starts the campaign. The campaign locks:
 
-## Continuation
+- one fallback distance;
+- one bullet spacing distance;
+- one fixed lot size.
 
-Continuation still requires Railway quality 88+, strong follow-through and local MT5 momentum. In addition, the scout must first move at least 0.10 ATR in profit.
+The opposite stop remains active after bullet 1.
 
-## Protection
+## Before direction lock
 
-First-leg failure, individual SL/TP, break-even, trailing, newest-leg sentinel, basket lock, daily loss and emergency loss controls are unchanged.
+A same-direction continuation stop and the opposite reversal stop are both maintained.
+
+- If the same-direction continuation triggers first, it becomes bullet 2.
+- If the opposite stop triggers first, the original-side position is closed and the campaign flips to the newly triggered side.
+
+## Direction lock
+
+When bullet 2 in the same direction is active:
+
+- the opposite pending order is cancelled;
+- the campaign direction is locked;
+- further equal-size continuation bullets are placed at the fixed campaign spacing.
+
+## Fallback rule
+
+Every bullet receives the same campaign fallback distance. The latest active bullet is the sentinel.
+
+When the newest bullet reaches its broker-side SL or fallback:
+
+1. cancel every remaining pending order;
+2. close every remaining campaign position;
+3. record the basket, legs, orders, banking decision and signal history;
+4. rearm a fresh two-sided bracket immediately.
+
+## Hard protection only
+
+Ordinary trading is not blocked by quality scoring. New bullets can be blocked only by:
+
+- Auto disabled or EA paused;
+- emergency stop;
+- disconnected/disabled MT5 trading;
+- broker spread above the catastrophic ceiling;
+- maximum positions or maximum total lots reached;
+- hard basket loss;
+- daily loss ceiling.
+
+## Twelve Data
+
+Twelve Data records live speed, acceleration, tick expansion and completed timeframe context. These fields support review and later optimisation. They do not control entry permission in v2.00.

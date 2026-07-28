@@ -5,9 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { config } from './config.js';
 import { combinedContext } from './context.js';
 import { LiveFeatureEngine } from './features.js';
-import { chooseAssessment } from './decision.js';
 import { JsonlStore } from './storage.js';
-import { finite, integer, nowIso, round, toCsv, uid } from './utils.js';
+import { finite, integer, nowIso, round, sessionForTimestamp, toCsv } from './utils.js';
 import { TwelveDataClient } from './twelve-data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -15,218 +14,56 @@ const publicDir = path.join(__dirname, '..', 'public');
 const store = new JsonlStore(config.dataDir, config.dataNamespace);
 const features = new LiveFeatureEngine();
 const contexts = {};
-const holds = new Map();
-const lastSignalAt = new Map();
+
 let twelveStatus = { ws: 'WARMING', rest: 'WARMING', lastTickAt: null, lastMarketTickAt: null, lastRestAt: null, lastError: null };
 let latestFeature = null;
-let latestAssessment = null;
 let lastScanLoggedAt = 0;
 let mt5 = {
   account: null, symbol: null, bid: 0, ask: 0, spreadPoints: 0, atrM1: 0,
   terminalConnected: false, algoAllowed: false, autonomous: false,
   positionCount: 0, pendingCount: 0, side: 'NONE', lastSeenAt: null,
-  consumedDecisionId: '', lastEvent: 'Waiting for MT5 EA'
+  engineState: 'WAITING FOR MT5', directionLocked: false, directionLegs: 0,
+  lastEvent: 'Waiting for MT5 EA'
 };
 let control = { autonomous: config.autonomousAtStart, emergency: false };
 let command = { id: 0, action: 'NONE', createdAt: null, consumedAt: null, result: null };
-let decision = waitDecision('WARMING');
 
-function waitDecision(reason, assessment = latestAssessment, timestamp = Date.now()) {
-  const best = assessment?.best;
-  return {
-    id: `wait-${timestamp}`,
-    action: 'WAIT', direction: best?.direction || 'NONE', quality: best?.quality || 0,
-    buyQuality: assessment?.buy?.quality || 0, sellQuality: assessment?.sell?.quality || 0,
-    addAllowed: false, createdAt: new Date(timestamp).toISOString(), validUntil: timestamp + 3_000,
-    reason, rejectionReasons: [...(best?.hardBlocks || []), ...(best?.reasons || [])],
-    regime: latestContext()?.regime || 'UNKNOWN', m5: latestContext()?.m5?.direction || 'UNKNOWN',
-    m15: latestContext()?.m15?.direction || 'UNKNOWN', h1: latestContext()?.h1?.direction || 'UNKNOWN'
-  };
-}
 function latestContext() { return combinedContext(contexts, config.primarySymbol); }
 function currentMt5(now = Date.now()) {
   const last = Date.parse(mt5.lastSeenAt || '');
   return { ...mt5, fresh: Number.isFinite(last) && now - last <= config.mt5OfflineMs };
 }
-function decisionFresh(now = Date.now()) { return decision.action !== 'WAIT' && now <= finite(decision.validUntil, 0); }
-function issueDecision(assessment, tick) {
-  const best = assessment.best;
-  const id = uid('signal');
-  decision = {
-    id, action: best.direction, direction: best.direction, quality: best.quality,
-    buyQuality: assessment.buy.quality, sellQuality: assessment.sell.quality,
-    addAllowed: best.addAllowed, createdAt: new Date(tick.timestamp).toISOString(),
-    validUntil: tick.timestamp + config.signalTtlMs,
-    reason: `${best.direction} QUALITY ${best.quality}/100 - CONFIRMED BREAKOUT HELD ${Math.max(config.signalHoldMs, config.breakoutConfirmMs)}MS`,
-    rejectionReasons: [], regime: latestContext().regime,
-    m5: latestContext().m5?.direction || 'UNKNOWN', m15: latestContext().m15?.direction || 'UNKNOWN',
-    h1: latestContext().h1?.direction || 'UNKNOWN'
-  };
-  store.append('signals', {
-    ...decision, symbol: tick.symbol, price: tick.price, session: best.session,
-    feature: latestFeature, assessment, context: latestContext()
-  }, 'signal');
-  store.event('signal', `${best.direction} decision ${best.quality}/100 issued`, { id, addAllowed: best.addAllowed, regime: decision.regime });
+function liveDirection(feature = latestFeature) {
+  const v1 = finite(feature?.velocity1Atr);
+  const v3 = finite(feature?.velocity3Atr);
+  if (v1 > 0.01 && v3 > 0) return 'UP';
+  if (v1 < -0.01 && v3 < 0) return 'DOWN';
+  return 'MIXED';
 }
-function updateDecision(tick, assessment) {
-  const now = tick.timestamp;
+function maybeLogTwelveScan(tick) {
+  const now = finite(tick.receivedAt, Date.now());
+  if (now - lastScanLoggedAt < config.scanLogSeconds * 1000) return;
+  lastScanLoggedAt = now;
   const broker = currentMt5(now);
-  const campaignActive = integer(broker.positionCount) > 0 || integer(broker.pendingCount) > 0;
-  if (!control.autonomous || control.emergency) {
-    decision = waitDecision(control.emergency ? 'EMERGENCY_STOP_ACTIVE' : 'AUTONOMOUS_DISABLED', assessment, now);
-    holds.clear();
-    return;
-  }
-  if (campaignActive) {
-    const best = assessment.best;
-    decision = {
-      id: decisionFresh(now) ? decision.id : `manage-${now}`,
-      action: 'MANAGE', direction: best.direction, quality: best.quality,
-      buyQuality: assessment.buy.quality, sellQuality: assessment.sell.quality,
-      addAllowed: best.addAllowed, createdAt: new Date(now).toISOString(), validUntil: now + config.signalTtlMs,
-      reason: best.eligible ? 'CAMPAIGN QUALITY SUPPORT' : 'CAMPAIGN QUALITY FADED',
-      rejectionReasons: [...best.hardBlocks, ...best.reasons], regime: latestContext().regime,
-      m5: latestContext().m5?.direction || 'UNKNOWN', m15: latestContext().m15?.direction || 'UNKNOWN',
-      h1: latestContext().h1?.direction || 'UNKNOWN'
-    };
-    holds.clear();
-    return;
-  }
-  if (decisionFresh(now) && !broker.consumedDecisionId) return;
-  if (decisionFresh(now) && broker.consumedDecisionId !== decision.id) return;
-  const best = assessment.best;
-  if (!best.eligible) {
-    holds.delete('BUY'); holds.delete('SELL');
-    decision = waitDecision([...best.hardBlocks, ...best.reasons].join(' | ') || 'QUALITY_NOT_CONFIRMED', assessment, now);
-    return;
-  }
-  const opposite = best.direction === 'BUY' ? 'SELL' : 'BUY';
-  holds.delete(opposite);
-  const previous = holds.get(best.direction);
-  const requiredHoldMs = Math.max(config.signalHoldMs, config.breakoutConfirmMs);
-  if (!previous) {
-    holds.set(best.direction, { startedAt: now, bestQuality: best.quality });
-    decision = waitDecision(`${best.direction}_BREAKOUT_HOLDING_${requiredHoldMs}MS`, assessment, now);
-    return;
-  }
-  previous.bestQuality = Math.max(previous.bestQuality, best.quality);
-  const cooldownReady = now - (lastSignalAt.get(best.direction) || 0) >= config.signalCooldownMs;
-  if (now - previous.startedAt < requiredHoldMs) {
-    decision = waitDecision(`${best.direction}_SIGNAL_HOLD_NOT_COMPLETE`, assessment, now);
-    return;
-  }
-  if (!cooldownReady) {
-    decision = waitDecision(`${best.direction}_SIGNAL_COOLDOWN`, assessment, now);
-    return;
-  }
-  issueDecision(assessment, tick);
-  lastSignalAt.set(best.direction, now);
-  holds.delete(best.direction);
-}
-function flattenScan(record) {
-  return {
-    id: record.id, at: record.at, symbol: record.symbol, price: record.price,
-    bid: record.bid, ask: record.ask, spreadPoints: record.spreadPoints, spreadAtr: record.spreadAtr,
-    session: record.session, decisionAction: record.decisionAction, decisionDirection: record.decisionDirection,
-    buyQuality: record.buyQuality, sellQuality: record.sellQuality, addAllowed: record.addAllowed,
-    regime: record.regime, m1Direction: record.m1Direction, m5Direction: record.m5Direction,
-    m15Direction: record.m15Direction, h1Direction: record.h1Direction,
-    velocity1Atr: record.velocity1Atr, velocity3Atr: record.velocity3Atr, velocity10Atr: record.velocity10Atr,
-    tickExpansion: record.tickExpansion, acceleration: record.acceleration, efficiency: record.efficiency,
-    breakoutBuy: record.breakoutBuy, breakoutSell: record.breakoutSell,
-    breakoutBuyDistanceAtr: record.breakoutBuyDistanceAtr, breakoutSellDistanceAtr: record.breakoutSellDistanceAtr,
-    breakoutConfirmed: record.breakoutConfirmed, postBreakoutPersistence: record.postBreakoutPersistence,
-    rejectionReason: record.rejectionReason, twelveWs: record.twelveWs, twelveRest: record.twelveRest,
-    mt5Fresh: record.mt5Fresh, feedDivergenceAtr: record.feedDivergenceAtr,
-    twelveTickAgeMs: record.twelveTickAgeMs, twelvePriceFresh: record.twelvePriceFresh,
-    featureTickCount: record.featureTickCount, featureHistorySpanMs: record.featureHistorySpanMs,
-    breakoutReferenceTickCount: record.breakoutReferenceTickCount, breakoutReferenceReady: record.breakoutReferenceReady,
-    buyVelocityScore: record.buyVelocityScore, buyPersistenceScore: record.buyPersistenceScore,
-    buyBreakoutScore: record.buyBreakoutScore, buyEfficiencyScore: record.buyEfficiencyScore,
-    sellVelocityScore: record.sellVelocityScore, sellPersistenceScore: record.sellPersistenceScore,
-    sellBreakoutScore: record.sellBreakoutScore, sellEfficiencyScore: record.sellEfficiencyScore
-  };
-}
-function maybeLogScan(tick, assessment) {
-  if (tick.timestamp - lastScanLoggedAt < config.scanLogSeconds * 1_000) return;
-  lastScanLoggedAt = tick.timestamp;
-  const broker = currentMt5(tick.timestamp);
-  const context = latestContext();
-  const best = assessment.best;
-  store.append('scans', {
-    at: new Date(tick.timestamp).toISOString(), symbol: tick.symbol, price: tick.price,
-    bid: broker.bid, ask: broker.ask, spreadPoints: broker.spreadPoints, spreadAtr: latestFeature?.spreadAtr,
-    session: best.session, decisionAction: decision.action, decisionDirection: decision.direction,
-    buyQuality: assessment.buy.quality, sellQuality: assessment.sell.quality, addAllowed: best.addAllowed,
-    regime: context.regime, m1Direction: context.m1?.direction, m5Direction: context.m5?.direction,
-    m15Direction: context.m15?.direction, h1Direction: context.h1?.direction,
-    velocity1Atr: latestFeature?.velocity1Atr, velocity3Atr: latestFeature?.velocity3Atr,
-    velocity10Atr: latestFeature?.velocity10Atr, tickExpansion: latestFeature?.tickExpansion,
-    acceleration: latestFeature?.acceleration, efficiency: latestFeature?.efficiency,
-    breakoutBuy: latestFeature?.breakoutBuy, breakoutSell: latestFeature?.breakoutSell,
-    breakoutBuyDistanceAtr: latestFeature?.breakoutBuyDistanceAtr, breakoutSellDistanceAtr: latestFeature?.breakoutSellDistanceAtr,
-    breakoutConfirmed: best.breakoutConfirmed, postBreakoutPersistence: best.postBreakoutPersistence,
-    featureTickCount: latestFeature?.tickCount, featureHistorySpanMs: latestFeature?.historySpanMs,
-    breakoutReferenceTickCount: latestFeature?.referenceTickCount, breakoutReferenceReady: latestFeature?.breakoutReferenceReady,
-    buyVelocityScore: latestFeature?.buy?.components?.velocity, buyPersistenceScore: latestFeature?.buy?.components?.persistence,
-    buyBreakoutScore: latestFeature?.buy?.components?.breakout, buyEfficiencyScore: latestFeature?.buy?.components?.efficiency,
-    sellVelocityScore: latestFeature?.sell?.components?.velocity, sellPersistenceScore: latestFeature?.sell?.components?.persistence,
-    sellBreakoutScore: latestFeature?.sell?.components?.breakout, sellEfficiencyScore: latestFeature?.sell?.components?.efficiency,
-    rejectionReason: decision.action === 'WAIT' ? decision.reason : '',
-    buyRejections: [...assessment.buy.hardBlocks, ...assessment.buy.reasons],
-    sellRejections: [...assessment.sell.hardBlocks, ...assessment.sell.reasons],
-    twelveWs: twelveStatus.ws, twelveRest: twelveStatus.rest, mt5Fresh: broker.fresh,
-    feedDivergenceAtr: best.feedDivergenceAtr,
-    twelveTickAgeMs: best.twelveTickAgeMs, twelvePriceFresh: best.twelvePriceFresh
-  }, 'scan');
-}
-function featureWarmReason(feature, context) {
-  const reasons = [...(feature?.warmupReasons || [])];
-  if (!context?.m1?.ready && !reasons.includes('M1_ATR_NOT_READY')) reasons.push('M1_CONTEXT_NOT_READY');
-  if (!feature?.breakoutReferenceReady) reasons.push(`BREAKOUT_REFERENCE_${feature?.referenceTickCount || 0}_OF_${config.breakoutReferenceMinTicks}`);
-  return `LIVE_FEATURE_ENGINE_WARMING | ${reasons.join(' | ') || 'WAITING_FOR_RECEIVED_QUOTES'}`;
-}
-function maybeLogWarmingScan(tick, reason) {
-  if (tick.timestamp - lastScanLoggedAt < config.scanLogSeconds * 1_000) return;
-  lastScanLoggedAt = tick.timestamp;
-  const broker = currentMt5(tick.timestamp);
   const context = latestContext();
   store.append('scans', {
-    at: new Date(tick.timestamp).toISOString(), symbol: tick.symbol, price: tick.price,
-    bid: broker.bid, ask: broker.ask, spreadPoints: broker.spreadPoints, spreadAtr: latestFeature?.spreadAtr,
-    session: 'WARMING', decisionAction: 'WAIT', decisionDirection: 'NONE',
-    buyQuality: 0, sellQuality: 0, addAllowed: false,
-    regime: context.regime, m1Direction: context.m1?.direction, m5Direction: context.m5?.direction,
-    m15Direction: context.m15?.direction, h1Direction: context.h1?.direction,
-    breakoutBuy: false, breakoutSell: false, breakoutConfirmed: false,
-    featureTickCount: latestFeature?.tickCount || 0, featureHistorySpanMs: latestFeature?.historySpanMs || 0,
-    breakoutReferenceTickCount: latestFeature?.referenceTickCount || 0,
-    breakoutReferenceReady: Boolean(latestFeature?.breakoutReferenceReady),
-    rejectionReason: reason, buyRejections: [reason], sellRejections: [reason],
-    twelveWs: twelveStatus.ws, twelveRest: twelveStatus.rest, mt5Fresh: broker.fresh,
-    twelveTickAgeMs: 0, twelvePriceFresh: true
+    at: new Date(now).toISOString(), source: 'TWELVE_DATA', symbol: tick.symbol, price: tick.price,
+    liveDirection: liveDirection(), velocity1Atr: finite(latestFeature?.velocity1Atr),
+    velocity3Atr: finite(latestFeature?.velocity3Atr), velocity10Atr: finite(latestFeature?.velocity10Atr),
+    tickExpansion: finite(latestFeature?.tickExpansion), acceleration: finite(latestFeature?.acceleration),
+    efficiency: finite(latestFeature?.efficiency), regime: context.regime,
+    m1Direction: context.m1?.direction || '—', m5Direction: context.m5?.direction || '—',
+    m15Direction: context.m15?.direction || '—', h1Direction: context.h1?.direction || '—',
+    mt5Fresh: broker.fresh, engineState: broker.engineState, positions: integer(broker.positionCount),
+    pending: integer(broker.pendingCount), side: broker.side || 'NONE', floatingProfit: finite(broker.floatingProfit),
+    lastEvent: broker.lastEvent || '', note: 'Twelve Data is telemetry only. MT5 bullet geometry controls entries.'
   }, 'scan');
 }
 function onTick(tick) {
-  const context = latestContext();
-  const processingNow = finite(tick.receivedAt, Date.now());
-  // v1.04 feature sequencing uses Railway receipt time. Provider timestamps may
-  // repeat or arrive sparsely and must never freeze the live scanner warmup.
-  features.ingest(tick.symbol, tick.price, processingNow);
-  latestFeature = features.snapshot(tick.symbol, context, currentMt5(processingNow));
-  const decisionTick = { ...tick, marketTimestamp: tick.timestamp, timestamp: processingNow };
-  if (!latestFeature?.ready) {
-    const reason = featureWarmReason(latestFeature, context);
-    decision = waitDecision(reason, null, processingNow);
-    maybeLogWarmingScan(decisionTick, reason);
-    return;
-  }
-  latestAssessment = chooseAssessment({
-    score: { buy: latestFeature.buy, sell: latestFeature.sell }, feature: latestFeature,
-    context, mt5: currentMt5(processingNow), twelveStatus, now: processingNow
-  });
-  updateDecision(decisionTick, latestAssessment);
-  maybeLogScan(decisionTick, latestAssessment);
+  const receivedAt = finite(tick.receivedAt, Date.now());
+  features.ingest(tick.symbol, tick.price, receivedAt);
+  latestFeature = features.snapshot(tick.symbol, latestContext(), currentMt5(receivedAt));
+  maybeLogTwelveScan(tick);
 }
 
 const twelve = new TwelveDataClient({
@@ -239,7 +76,7 @@ const twelve = new TwelveDataClient({
   onStatus: status => { twelveStatus = status; }
 });
 twelve.start();
-store.event('startup', `${config.serviceName} started`, { version: config.version, symbol: config.primarySymbol, mode: config.mode, dataNamespace: config.dataNamespace });
+store.event('startup', `${config.serviceName} started`, { version: config.version, mode: config.mode, dataNamespace: config.dataNamespace });
 
 export function calculatePerformance(rows) {
   const closed = rows.filter(row => String(row.status || 'CLOSED').toUpperCase() === 'CLOSED');
@@ -260,27 +97,26 @@ export function calculatePerformance(rows) {
 }
 function overview() {
   const tickAt = Date.parse(twelveStatus.lastTickAt || '');
-  const twelveTickAgeMs = Number.isFinite(tickAt) ? Math.max(0, Date.now() - tickAt) : null;
-  const twelvePriceFresh = twelveTickAgeMs !== null && twelveTickAgeMs <= config.wsStaleMs;
+  const tickAgeMs = Number.isFinite(tickAt) ? Math.max(0, Date.now() - tickAt) : null;
   return {
     service: config.serviceName, version: config.version, mode: config.mode,
-    control, config: {
-      primarySymbol: config.primarySymbol, initialQualityMin: config.initialQualityMin,
-      continuationQualityMin: config.continuationQualityMin, signalHoldMs: config.signalHoldMs,
-      maxSpreadAtr: config.maxSpreadAtr, timezone: config.timezone, dataNamespace: config.dataNamespace,
-      breakoutConfirmMs: config.breakoutConfirmMs, breakoutMinAtr: config.breakoutMinAtr,
-      breakoutPersistenceMin: config.breakoutPersistenceMin, breakoutEfficiencyMin: config.breakoutEfficiencyMin,
-      featureWarmMinTicks: config.featureWarmMinTicks, featureWarmMinHistoryMs: config.featureWarmMinHistoryMs,
-      breakoutReferenceMinTicks: config.breakoutReferenceMinTicks
+    control, config: { primarySymbol: config.primarySymbol, timezone: config.timezone, dataNamespace: config.dataNamespace },
+    twelveData: { ...twelveStatus, tickAgeMs, priceFresh: tickAgeMs !== null && tickAgeMs <= config.wsStaleMs, staleAfterMs: config.wsStaleMs },
+    mt5: currentMt5(), feature: latestFeature, context: latestContext(),
+    engine: {
+      name: 'AGGRESSIVE TWO-SIDED BULLET ENGINE',
+      entryPermission: 'MT5 LOCAL — NO QUALITY FILTER',
+      twelveDataRole: 'LIVE TELEMETRY AND HISTORY ONLY',
+      liveDirection: liveDirection(),
+      velocity1Atr: finite(latestFeature?.velocity1Atr), velocity3Atr: finite(latestFeature?.velocity3Atr),
+      velocity10Atr: finite(latestFeature?.velocity10Atr), tickExpansion: finite(latestFeature?.tickExpansion),
+      acceleration: finite(latestFeature?.acceleration)
     },
-    twelveData: { ...twelveStatus, tickAgeMs: twelveTickAgeMs, priceFresh: twelvePriceFresh, staleAfterMs: config.wsStaleMs },
-    mt5: currentMt5(), decision, feature: latestFeature,
-    assessment: latestAssessment, context: latestContext(),
     performance: calculatePerformance(store.all('baskets')),
     counts: Object.fromEntries(['scans','signals','baskets','legs','orders','banks','events'].map(name => [name, store.all(name).length])),
-    recentScans: store.list('scans', 120).map(flattenScan), recentSignals: store.list('signals', 50),
-    recentBaskets: store.list('baskets', 100), recentLegs: store.list('legs', 150),
-    recentOrders: store.list('orders', 150), recentBanks: store.list('banks', 100), recentEvents: store.list('events', 100)
+    recentScans: store.list('scans', 150), recentSignals: store.list('signals', 50),
+    recentBaskets: store.list('baskets', 100), recentLegs: store.list('legs', 200),
+    recentOrders: store.list('orders', 200), recentBanks: store.list('banks', 100), recentEvents: store.list('events', 100)
   };
 }
 function parseBody(request) {
@@ -324,29 +160,18 @@ function queueCommand(action) {
   return command;
 }
 function controlText() {
-  const d = decision;
   return [
     `command_id=${command.consumedAt ? 0 : command.id || 0}`,
     `action=${command.consumedAt ? 'NONE' : command.action || 'NONE'}`,
     `autonomous=${control.autonomous ? 'true' : 'false'}`,
     `emergency=${control.emergency ? 'true' : 'false'}`,
-    `decision_id=${d.id || ''}`,
-    `decision_action=${d.action || 'WAIT'}`,
-    `decision_direction=${d.direction || 'NONE'}`,
-    `decision_quality=${finite(d.quality)}`,
-    `decision_buy_quality=${finite(d.buyQuality)}`,
-    `decision_sell_quality=${finite(d.sellQuality)}`,
-    `decision_add_allowed=${d.addAllowed ? 'true' : 'false'}`,
-    `decision_valid_until=${integer(d.validUntil)}`,
-    `decision_ttl_remaining_ms=${Math.max(0, integer(d.validUntil) - Date.now())}`,
-    `server_now_ms=${Date.now()}`,
-    `decision_reason=${String(d.reason || '').replace(/[\r\n=]/g, ' ')}`,
-    `decision_regime=${d.regime || 'UNKNOWN'}`,
-    `decision_m5=${d.m5 || 'UNKNOWN'}`,
-    `decision_m15=${d.m15 || 'UNKNOWN'}`,
-    `decision_h1=${d.h1 || 'UNKNOWN'}`,
-    `initial_quality_min=${config.initialQualityMin}`,
-    `continuation_quality_min=${config.continuationQualityMin}`
+    'settings_version=0', 'fixed_lot=0', 'use_equity_scaling=false', 'equity_per_001_lot=1000',
+    'decision_id=LOCAL_BULLET_ENGINE', 'decision_action=LOCAL', 'decision_direction=NONE',
+    'decision_quality=0', 'decision_buy_quality=0', 'decision_sell_quality=0',
+    'decision_add_allowed=true', `decision_valid_until=${Date.now() + 60_000}`,
+    'decision_ttl_remaining_ms=60000', `server_now_ms=${Date.now()}`,
+    'decision_reason=MT5 TWO-SIDED BULLET ENGINE CONTROLS ENTRIES',
+    'decision_regime=LOCAL', 'decision_m5=TELEMETRY', 'decision_m15=TELEMETRY', 'decision_h1=TELEMETRY'
   ].join('\n');
 }
 
@@ -368,22 +193,22 @@ export function createHttpServer() {
           ...mt5, ...body,
           bid: finite(body.bid, mt5.bid), ask: finite(body.ask, mt5.ask), spreadPoints: finite(body.spreadPoints, mt5.spreadPoints),
           atrM1: finite(body.atrM1, mt5.atrM1), balance: finite(body.balance, mt5.balance), equity: finite(body.equity, mt5.equity),
+          floatingProfit: finite(body.floatingProfit, mt5.floatingProfit), peakBasketProfit: finite(body.peakBasketProfit, mt5.peakBasketProfit),
           positionCount: integer(body.positionCount, mt5.positionCount), pendingCount: integer(body.pendingCount, mt5.pendingCount),
+          directionLegs: integer(body.directionLegs ?? body.positionsOpened, mt5.directionLegs),
           terminalConnected: String(body.terminalConnected) === 'true' || body.terminalConnected === true,
           algoAllowed: String(body.algoAllowed) === 'true' || body.algoAllowed === true,
+          autonomous: String(body.autonomous) === 'true' || body.autonomous === true,
+          directionLocked: String(body.directionLocked) === 'true' || body.directionLocked === true || String(body.engineState || '').includes('LOCKED'),
           lastSeenAt: nowIso()
         };
-        if (String(body.consumedDecisionId || '') === decision.id && decision.action !== 'WAIT') {
-          decision.consumedAt = nowIso();
-          mt5.consumedDecisionId = decision.id;
-        }
         if (integer(body.consumedCommandId) >= command.id && command.id > 0) {
           command.consumedAt = nowIso(); command.result = body.lastCommandResult || body.lastEvent || 'Consumed';
         }
         if (store.all('mt5').length === 0 || Date.now() - Date.parse(store.all('mt5')[0]?.receivedAt || 0) > 10_000) store.append('mt5', mt5, 'mt5');
-        return send(response, 200, { ok: true, decisionId: decision.id, autonomous: control.autonomous });
+        return send(response, 200, { ok: true, autonomous: control.autonomous });
       }
-      const collectionRoutes = { basket: 'baskets', leg: 'legs', order: 'orders', bank: 'banks' };
+      const collectionRoutes = { basket: 'baskets', signal: 'signals', leg: 'legs', order: 'orders', bank: 'banks' };
       for (const [route, collection] of Object.entries(collectionRoutes)) {
         if (pathname === `/api/ea/${route}` && request.method === 'POST') {
           const record = route === 'basket' ? store.upsert(collection, body) : store.append(collection, body, route);
@@ -391,6 +216,7 @@ export function createHttpServer() {
           return send(response, 200, { ok: true, id: record.id, performance: calculatePerformance(store.all('baskets')) });
         }
       }
+      if (pathname === '/api/ea/scan' && request.method === 'POST') return send(response, 200, { ok: true, id: store.append('scans', { ...body, source: 'MT5' }, 'scan').id });
       if (pathname === '/api/ea/event' && request.method === 'POST') return send(response, 200, { ok: true, id: store.event(body.type || 'ea', body.message || 'EA event', body.data || null).id });
       if (pathname === '/api/command' && request.method === 'POST') {
         const action = String(body.action || '').toUpperCase();
@@ -405,8 +231,7 @@ export function createHttpServer() {
       const match = pathname.match(/^\/api\/export\/(scans|signals|baskets|legs|orders|banks|events|contexts|mt5)\.csv$/);
       if (match && request.method === 'GET') {
         const collection = match[1];
-        const rows = collection === 'scans' ? store.all(collection).map(flattenScan) : store.all(collection);
-        return send(response, 200, toCsv([...rows].reverse()), 'text/csv; charset=utf-8', { 'Content-Disposition': `attachment; filename="eve-twelve-data-trader-${collection}.csv"` });
+        return send(response, 200, toCsv([...store.all(collection)].reverse()), 'text/csv; charset=utf-8', { 'Content-Disposition': `attachment; filename="eve-bullet-storm-${collection}.csv"` });
       }
       return send(response, 404, { ok: false, error: 'NOT_FOUND' });
     } catch (error) {

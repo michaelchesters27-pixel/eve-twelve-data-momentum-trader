@@ -1,0 +1,21 @@
+EVE Bullet Storm Trader v2.00
+
+FULL STRATEGY REPLACEMENT
+
+1. Removed the confirmed-breakout decision engine and quality-score trade permission.
+2. Removed M5/M15/H1 permission filters, session filters and conservative cooldown logic.
+3. MT5 now arms a BUY STOP and SELL STOP around every new M1 candle while flat.
+4. The first triggered order becomes bullet 1.
+5. The opposite pending order remains active until bullet 2 triggers in the same direction.
+6. If the opposite order triggers before bullet 2, the original side is closed and the campaign flips.
+7. Bullet 2 locks the campaign direction and cancels the opposite order.
+8. Equal-size continuation bullets are placed automatically as price advances.
+9. One campaign fallback distance is locked from bullet 1 and applied to every later bullet.
+10. The newest bullet is the sentinel; its broker-side SL/fallback closes the full remaining campaign.
+11. Immediate rearm follows every completed campaign.
+12. No martingale. Every bullet uses the same lot size.
+13. Hard basket loss, daily loss, maximum positions, maximum lots, spread catastrophe protection and emergency stop remain.
+14. Twelve Data remains live for telemetry, speed, acceleration, candle context and history, but never grants or refuses an ordinary trade.
+15. Added Signals CSV for every scout, reversal and continuation bullet fired.
+16. Added exact direction-lock, direction-leg and ATR fields to the Railway heartbeat.
+17. Added a clean v200 history namespace independent of the old DATA_NAMESPACE variable.

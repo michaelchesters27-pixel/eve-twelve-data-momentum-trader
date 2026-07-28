@@ -1,5 +1,13 @@
 Compile this file in MetaEditor:
 
-EVE_Twelve_Data_Momentum_Trader_v1.04.mq5
+EVE_Twelve_Data_Bullet_Storm_v2.00.mq5
 
-Require 0 errors. Remove v1.03 from the chart before attaching v1.04. Use the same Railway URL and BOT_TOKEN.
+Requirements:
+- 0 compile errors
+- Hedging demo account
+- ONE XAUUSD M1 chart
+- Same Railway URL and BOT_TOKEN
+- Allow Algo Trading enabled
+- Existing Railway domain allowed under MT5 WebRequest settings
+
+Remove v1.04 before attaching v2.00. Do not run both versions together.

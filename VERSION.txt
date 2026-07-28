@@ -1,8 +1,9 @@
-EVE Twelve Data Momentum Trader
-Version: 1.04
-Railway package: 1.0.4
-EA: EVE_Twelve_Data_Momentum_Trader_v1.04.mq5
-Magic number: 2807202604
-Order prefix: EVETD104
-Data namespace: v104
-Mode: Autonomous demo trader
+EVE Bullet Storm Trader
+Version: 2.00
+Railway package: 2.0.0
+EA: EVE_Twelve_Data_Bullet_Storm_v2.00.mq5
+Magic number: 2807202620
+Order prefix: EVEB200
+Data namespace: v200
+Strategy: AGGRESSIVE_TWO_SIDED_BULLET_ENGINE
+Mode: Autonomous hedging-demo trader
