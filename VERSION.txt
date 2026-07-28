@@ -1,8 +1,8 @@
 EVE Twelve Data Momentum Trader
-Version: 1.02
-Railway package: 1.0.2
-EA: EVE_Twelve_Data_Momentum_Trader_v1.02.mq5
-Magic number: 2807202602
-Order prefix: EVETD102
-Data namespace: v102
+Version: 1.03
+Railway package: 1.0.3
+EA: EVE_Twelve_Data_Momentum_Trader_v1.03.mq5
+Magic number: 2807202603
+Order prefix: EVETD103
+Data namespace: v103
 Mode: Autonomous demo trader

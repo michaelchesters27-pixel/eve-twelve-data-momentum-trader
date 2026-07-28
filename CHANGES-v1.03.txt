@@ -1,0 +1,30 @@
+EVE Twelve Data Momentum Trader v1.03
+
+COMPLETE CORRECTED RELEASE
+- Full v1.02 confirmed-breakout strategy carried forward under a clean v1.03 identity.
+- Includes the MetaEditor compile correction for ScoutHasProvenContinuation().
+- New Magic Number 2807202603, comment prefix EVETD103 and v103 history namespace.
+
+ENTRY ENGINE
+1. Confirmed live breakout is a mandatory hard gate.
+2. Breakout distance must exceed 0.015 M1 ATR.
+3. Breakout quality must remain eligible for at least 900 ms.
+4. Compression is blocked until a closed M1 expansion exists.
+5. Post-breakout persistence, efficiency and tick expansion are mandatory.
+6. Scores without breakout are capped below the entry threshold.
+7. Breakout and follow-through now carry more weight than raw speed.
+
+EXECUTION
+8. Continuation orders require the scout to move at least 0.10 ATR favourable first.
+9. New Magic Number 2807202603 and comment prefix EVETD103.
+
+DATA
+10. REST refreshes are aligned to completed M1/M5/M15/H1 closes.
+11. Still-forming candles are excluded from context calculations.
+12. Overlapping REST requests are prevented.
+13. v103 history namespace starts a clean forward-test sample.
+14. Scan CSV includes breakout distance and score components.
+
+Compile correction:
+- Fixed undeclared identifier validation_atr in ScoutHasProvenContinuation().
+- Continuation proof now correctly uses the scout-entry ATR, then live momentum ATR, then CurrentATR() as fallback.

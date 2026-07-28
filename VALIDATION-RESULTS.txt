@@ -1,4 +1,4 @@
-EVE Twelve Data Momentum Trader v1.02 validation
+EVE Twelve Data Momentum Trader v1.03 validation
 
 - Corrected the MetaEditor compile fault at the continuation ATR check: undeclared identifier validation_atr.
 - Continuation proof now uses first_leg_entry_atr, then momentum.atr, then CurrentATR().
@@ -9,4 +9,6 @@ EVE Twelve Data Momentum Trader v1.02 validation
 - MQL lexical balance and StringFormat placeholder checks passed.
 - Static checks confirm scout-profit-before-continuation logic and reject the faulty validation_atr expression.
 
-MetaEditor is not installed here. Compile the corrected v1.02 MQ5 file locally and require 0 errors before attaching it to MT5.
+MetaEditor is not installed here. Compile the corrected v1.03 MQ5 file locally and require 0 errors before attaching it to MT5.
+
+MetaEditor compile status: must be confirmed locally with 0 errors and 0 warnings.

@@ -1,10 +1,10 @@
-# EVE Twelve Data Momentum Trader v1.02
+# EVE Twelve Data Momentum Trader v1.03
 
 A real autonomous XAUUSD **demo** trading system using Twelve Data on Railway for market intelligence and MT5 for execution and protection.
 
-## v1.02 entry-engine rebuild
+## v1.03 complete corrected build
 
-This build addresses the first 18-basket forward test, where the bot entered without a confirmed breakout.
+This is the complete corrected release of the confirmed-breakout rebuild. It includes the compile fix found in v1.02 and starts a clean v1.03 forward-test sample.
 
 - A live directional microstructure breakout is now mandatory.
 - Price must remain beyond the breakout reference while quality holds for at least 900 ms.
@@ -14,7 +14,7 @@ This build addresses the first 18-basket forward test, where the bot entered wit
 - Raw velocity and acceleration have less influence; confirmed breakout and follow-through have more influence.
 - Continuation orders cannot be armed until the scout has moved at least 0.10 ATR in profit.
 - Twelve Data REST calls are aligned to completed candle closes and the still-forming candle is excluded.
-- v1.02 uses a separate `v102` history namespace, so its forward-test statistics start at zero without deleting v1.01 files.
+- v1.03 uses a separate `v103` history namespace, so its forward-test statistics start at zero without deleting v1.01 files.
 
 ## What runs where
 
@@ -23,4 +23,4 @@ This build addresses the first 18-basket forward test, where the bot entered wit
 
 ## Safety
 
-Experimental software. It has not been proven profitable. Use a hedging demo account at 0.01 lot until a meaningful new v1.02 sample exists.
+Experimental software. It has not been proven profitable. Use a hedging demo account at 0.01 lot until a meaningful new v1.03 sample exists.

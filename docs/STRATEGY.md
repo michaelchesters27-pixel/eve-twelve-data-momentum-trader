@@ -1,4 +1,4 @@
-# v1.02 strategy specification
+# v1.03 strategy specification
 
 ## Mandatory eligibility gate
 

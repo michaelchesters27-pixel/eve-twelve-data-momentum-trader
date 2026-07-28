@@ -18,15 +18,15 @@ function listEnv(name, fallback = []) {
 }
 
 export const config = Object.freeze({
-  version: '1.0.2',
+  version: '1.0.3',
   serviceName: 'EVE Twelve Data Momentum Trader',
   mode: 'AUTONOMOUS_DEMO_TRADER',
   port: numEnv('PORT', 3000, 1, 65535),
   botToken: String(process.env.BOT_TOKEN || 'CHANGE-ME').trim(),
   dashboardOrigin: String(process.env.DASHBOARD_ORIGIN || '*').trim(),
   dataDir: String(process.env.DATA_DIR || path.join(__dirname, '..', 'data')).trim(),
-  // v1.02 intentionally starts a clean forward-test sample while leaving older files untouched.
-  dataNamespace: String(process.env.DATA_NAMESPACE || 'v102').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'v102',
+  // v1.03 intentionally starts a clean forward-test sample while leaving older files untouched.
+  dataNamespace: String(process.env.DATA_NAMESPACE || 'v103').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'v103',
   timezone: String(process.env.TIMEZONE || 'Europe/London').trim(),
   autonomousAtStart: boolEnv('AUTO_ENABLED', true),
   twelveDataApiKey: String(process.env.TWELVE_DATA_API_KEY || '').trim(),

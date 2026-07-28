@@ -1,17 +1,17 @@
 from pathlib import Path
 import re, sys
 root=Path(__file__).resolve().parents[1]
-ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.02.mq5'
+ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.03.mq5'
 server=root/'railway/src/server.js'
 config=root/'railway/src/config.js'
 features=root/'railway/src/features.js'
 decision=root/'railway/src/decision.js'
 tdfile=root/'railway/src/twelve-data.js'
 errors=[]
-if not ea.exists(): errors.append('Missing v1.02 EA file')
+if not ea.exists(): errors.append('Missing v1.03 EA file')
 text=ea.read_text(encoding='utf-8') if ea.exists() else ''
 required=[
- '#property version   "1.02"','2807202602','EVETD102','PlaceInitialScout','remote_decision_quality',
+ '#property version   "1.03"','2807202603','EVETD103','PlaceInitialScout','remote_decision_quality',
  'TWELVE_DATA_CONFIRMED_BREAKOUT_TRADER','InpUseFirstLegFailureExit','InpCloseBasketOnNewestLegSL',
  'InpUseBasketProfitLock','InpRequireScoutProfitBeforeAdd','InpScoutProfitBeforeAddATR','ScoutHasProvenContinuation',
  'trade.Buy(','trade.Sell(','trade.BuyStop(','trade.SellStop(',
