@@ -24,3 +24,25 @@ test('score is capped below entry threshold when no breakout exists',()=>{
   assert.equal(f.breakoutBuy,false);
   assert.ok(f.buy.score<=69);
 });
+
+
+test('received quotes start scanning without waiting for a full breakout reference window',()=>{
+  const e=new LiveFeatureEngine();
+  const start=Date.now()-2_000;
+  for(let i=0;i<4;i++) e.ingest('XAU/USD',4000+i*0.001,start+i*550);
+  const f=e.snapshot('XAU/USD',context,{fresh:true,bid:3999.98,ask:4000.02,atrM1:2});
+  assert.equal(f.ready,true);
+  assert.equal(f.tickCount,4);
+  assert.equal(f.breakoutReferenceReady,false);
+  assert.ok(f.buy.score<80);
+});
+
+test('sparse received quotes build a fallback breakout reference',()=>{
+  const e=new LiveFeatureEngine();
+  const start=Date.now()-16_000;
+  [4000.00,4000.01,4000.02,4000.01,4000.00,4000.08].forEach((price,index)=>e.ingest('XAU/USD',price,start+index*3_000));
+  const f=e.snapshot('XAU/USD',context,{fresh:true,bid:4000.06,ask:4000.10,atrM1:2});
+  assert.equal(f.ready,true);
+  assert.equal(f.breakoutReferenceReady,true);
+  assert.equal(f.breakoutBuy,true);
+});

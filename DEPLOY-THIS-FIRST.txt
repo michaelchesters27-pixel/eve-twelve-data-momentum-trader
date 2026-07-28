@@ -1,4 +1,4 @@
-EVE TWELVE DATA MOMENTUM TRADER v1.03
+EVE TWELVE DATA MOMENTUM TRADER v1.04
 ====================================
 
 THIS IS A REAL TRADING EA. USE A HEDGING DEMO ACCOUNT ONLY.
@@ -8,9 +8,9 @@ UPDATE THE EXISTING GITHUB REPOSITORY
 1. Replace the complete contents of the current GitHub repository with this project.
 2. Commit the replacement. Railway redeploys the existing service.
 3. Do not change the existing Railway variables.
-4. v1.03 starts a clean statistics sample under the built-in v103 data namespace.
-5. Remove v1.01 from the MT5 chart.
-6. Compile and attach mt5/EVE_Twelve_Data_Momentum_Trader_v1.03.mq5.
+4. v1.04 starts a clean statistics sample under the built-in v104 data namespace.
+5. Remove v1.03 from the MT5 chart.
+6. Compile and attach mt5/EVE_Twelve_Data_Momentum_Trader_v1.04.mq5.
 7. Use the same Railway URL and BOT_TOKEN.
 
 NO NEW RAILWAY VARIABLES ARE REQUIRED
@@ -23,14 +23,14 @@ BREAKOUT_MIN_ATR=0.015
 BREAKOUT_PERSISTENCE_MIN=0.68
 BREAKOUT_EFFICIENCY_MIN=0.48
 BREAKOUT_TICK_EXPANSION_MIN=1.10
-DATA_NAMESPACE=v103
+DATA_NAMESPACE=v104
 
 MT5
 ---
 MetaEditor must show 0 errors.
-Attach v1.03 to ONE XAUUSD M1 chart on a hedging demo account.
+Attach v1.04 to ONE XAUUSD M1 chart on a hedging demo account.
 Keep Algo Trading enabled.
-Do not run v1.01 and v1.03 together.
+Do not run v1.03 and v1.04 together.
 
 WHAT CHANGED
 ------------
@@ -39,3 +39,5 @@ WHAT CHANGED
 - Breakout must persist for at least 900 ms.
 - Scout must be at least 0.10 ATR favourable before any continuation order.
 - REST data refreshes only after candle closes and excludes the live forming candle.
+
+V1.04 WARMUP FIX: no new Railway variables are required. The dashboard will record diagnostic WAIT scans while the feature engine warms.

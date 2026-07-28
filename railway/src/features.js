@@ -15,6 +15,21 @@ function scaledPositive(value, threshold, maxPoints) {
   if (threshold <= 0 || value <= 0) return 0;
   return clamp(value / threshold, 0, 1.5) / 1.5 * maxPoints;
 }
+function emptyScore(direction) {
+  return {
+    direction, score: 0, components: {}, warnings: ['WARMING'],
+    metrics: { breakout: false, breakoutDistanceAtr: 0, persistence: 0 }
+  };
+}
+function warmSnapshot(symbol, ticks, atr, reasons = []) {
+  const latest = ticks.at(-1);
+  const historySpanMs = ticks.length > 1 ? Math.max(0, latest.timestamp - ticks[0].timestamp) : 0;
+  return {
+    ready: false, symbol, timestamp: latest?.timestamp || null, price: latest?.price || 0, atr,
+    tickCount: ticks.length, historySpanMs, referenceTickCount: 0, breakoutReferenceReady: false,
+    warmupReasons: reasons, buy: emptyScore('BUY'), sell: emptyScore('SELL')
+  };
+}
 
 export class LiveFeatureEngine {
   constructor(maxAgeMs = 120_000) {
@@ -23,23 +38,36 @@ export class LiveFeatureEngine {
   }
   ingest(symbol, price, timestamp = Date.now()) {
     const numericPrice = finite(price, NaN);
+    const numericTimestamp = finite(timestamp, Date.now());
     if (!Number.isFinite(numericPrice) || numericPrice <= 0) return null;
     const ticks = this.series.get(symbol) || [];
     const last = ticks.at(-1);
-    if (last && timestamp < last.timestamp - 2_000) return null;
-    if (!last || timestamp !== last.timestamp || numericPrice !== last.price) ticks.push({ symbol, price: numericPrice, timestamp });
-    const cutoff = timestamp - this.maxAgeMs;
+    if (last && numericTimestamp < last.timestamp - 2_000) return null;
+
+    // v1.04 uses the Railway receipt clock. Each received quote is retained even
+    // when the provider repeats the same market timestamp or unchanged price.
+    const safeTimestamp = last ? Math.max(numericTimestamp, last.timestamp + 1) : numericTimestamp;
+    ticks.push({ symbol, price: numericPrice, timestamp: safeTimestamp });
+
+    const cutoff = safeTimestamp - this.maxAgeMs;
     while (ticks.length && ticks[0].timestamp < cutoff) ticks.shift();
     this.series.set(symbol, ticks);
     return this.snapshot(symbol);
   }
   snapshot(symbol, context = null, mt5 = null) {
     const ticks = this.series.get(symbol) || [];
-    if (ticks.length < 4) return { ready: false, symbol, tickCount: ticks.length, buy: emptyScore('BUY'), sell: emptyScore('SELL') };
+    const atr = finite(context?.atr, 0);
+    if (!ticks.length) return warmSnapshot(symbol, ticks, atr, ['WAITING_FOR_FIRST_TICK']);
+
     const latest = ticks.at(-1);
     const now = latest.timestamp;
     const price = latest.price;
-    const atr = finite(context?.atr, 0);
+    const historySpanMs = ticks.length > 1 ? Math.max(0, now - ticks[0].timestamp) : 0;
+    const warmupReasons = [];
+    if (ticks.length < config.featureWarmMinTicks) warmupReasons.push(`TICKS_${ticks.length}_OF_${config.featureWarmMinTicks}`);
+    if (historySpanMs < config.featureWarmMinHistoryMs) warmupReasons.push(`HISTORY_${historySpanMs}MS_OF_${config.featureWarmMinHistoryMs}MS`);
+    if (atr <= 0) warmupReasons.push('M1_ATR_NOT_READY');
+
     const delta = milliseconds => price - valueAtOrBefore(ticks, now - milliseconds);
     const d250 = delta(250), d1 = delta(1_000), d3 = delta(3_000), d10 = delta(10_000);
     const current3Count = ticks.filter(tick => tick.timestamp >= now - 3_000).length;
@@ -55,42 +83,48 @@ export class LiveFeatureEngine {
     const path = changes.reduce((sum, change) => sum + Math.abs(change), 0);
     const efficiency = path > 0 ? Math.abs(d3) / path : 0;
 
-    // Use an older frozen reference window. The most recent ticks are excluded so a
-    // breakout can remain true long enough to be confirmed rather than disappearing
-    // as soon as its own price becomes the rolling high/low.
+    // Prefer the configured frozen lookback. During sparse feeds, fall back to the
+    // latest received quotes older than the exclusion window. This permits reliable
+    // warmup without weakening the mandatory confirmed-breakout gate.
     const referenceStart = now - config.breakoutLookbackMs;
     const referenceEnd = now - config.breakoutExcludeMs;
-    const referenceWindow = ticks.filter(tick => tick.timestamp >= referenceStart && tick.timestamp <= referenceEnd);
+    const preferredReference = ticks.filter(tick => tick.timestamp >= referenceStart && tick.timestamp <= referenceEnd);
+    const olderReference = ticks.filter(tick => tick.timestamp <= referenceEnd);
+    const referenceWindow = preferredReference.length >= config.breakoutReferenceMinTicks
+      ? preferredReference
+      : olderReference.slice(-Math.max(config.breakoutReferenceMinTicks, 20));
+    const breakoutReferenceReady = referenceWindow.length >= config.breakoutReferenceMinTicks;
     const microHigh = referenceWindow.length ? Math.max(...referenceWindow.map(tick => tick.price)) : price;
     const microLow = referenceWindow.length ? Math.min(...referenceWindow.map(tick => tick.price)) : price;
     const breakoutBuyDistance = Math.max(0, price - microHigh);
     const breakoutSellDistance = Math.max(0, microLow - price);
     const breakoutBuyDistanceAtr = atr > 0 ? breakoutBuyDistance / atr : 0;
     const breakoutSellDistanceAtr = atr > 0 ? breakoutSellDistance / atr : 0;
-    const breakoutBuy = referenceWindow.length >= 3 && breakoutBuyDistanceAtr >= config.breakoutMinAtr;
-    const breakoutSell = referenceWindow.length >= 3 && breakoutSellDistanceAtr >= config.breakoutMinAtr;
+    const breakoutBuy = breakoutReferenceReady && breakoutBuyDistanceAtr >= config.breakoutMinAtr;
+    const breakoutSell = breakoutReferenceReady && breakoutSellDistanceAtr >= config.breakoutMinAtr;
 
     const acceleration = Math.abs(d3) > 0 ? Math.abs(d1) / Math.max(Math.abs(d3) / 3, Number.EPSILON) : 0;
     const normalized = value => atr > 0 ? value / atr : 0;
     const spreadPrice = mt5?.fresh ? Math.max(0, finite(mt5.ask) - finite(mt5.bid)) : 0;
     const executionAtr = Math.max(finite(mt5?.atrM1, 0), atr, Number.EPSILON);
     const spreadAtr = spreadPrice / executionAtr;
+    const ready = warmupReasons.length === 0;
     const base = {
-      ready: Boolean(atr > 0 && ticks.length >= 8 && referenceWindow.length >= 3), symbol, timestamp: now, price, atr,
+      ready, symbol, timestamp: now, price, atr,
       delta250: d250, delta1: d1, delta3: d3, delta10: d10,
       velocity250Atr: normalized(d250), velocity1Atr: normalized(d1), velocity3Atr: normalized(d3), velocity10Atr: normalized(d10),
       tickExpansion, acceleration, persistenceBuy, persistenceSell, efficiency,
       microHigh, microLow, breakoutBuy, breakoutSell,
       breakoutBuyDistanceAtr, breakoutSellDistanceAtr,
-      spreadPrice, spreadAtr, tickCount: ticks.length, referenceTickCount: referenceWindow.length
+      spreadPrice, spreadAtr, tickCount: ticks.length, historySpanMs,
+      referenceTickCount: referenceWindow.length, breakoutReferenceReady,
+      warmupReasons
     };
     return { ...base, buy: scoreDirection('BUY', base, context), sell: scoreDirection('SELL', base, context) };
   }
   latestPrice(symbol) { return this.series.get(symbol)?.at(-1)?.price || null; }
   latestTimestamp(symbol) { return this.series.get(symbol)?.at(-1)?.timestamp || null; }
 }
-
-function emptyScore(direction) { return { direction, score: 0, components: {}, warnings: ['WARMING'] }; }
 
 export function scoreDirection(direction, feature, context) {
   if (!feature?.ready || !context?.m1?.ready) return emptyScore(direction);
@@ -119,7 +153,10 @@ export function scoreDirection(direction, feature, context) {
   };
   let score = Object.values(components).reduce((sum, value) => sum + value, 0);
   const warnings = [];
-  if (!breakout) {
+  if (!feature.breakoutReferenceReady) {
+    score = Math.min(score, 49);
+    warnings.push('BREAKOUT_REFERENCE_WARMING');
+  } else if (!breakout) {
     score = Math.min(score, 69);
     warnings.push('BREAKOUT_REQUIRED');
   }

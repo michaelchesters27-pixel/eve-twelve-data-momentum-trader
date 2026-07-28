@@ -1,0 +1,14 @@
+EVE Twelve Data Momentum Trader v1.04
+
+SCANNER WARMUP FIX
+
+1. Live feature sequencing now uses Railway receipt time rather than provider market timestamps.
+2. Every received WebSocket quote is retained, including repeated timestamps and unchanged prices.
+3. Scanner readiness no longer depends on three ticks inside one narrow breakout-reference window.
+4. Warmup now requires four received quotes, 1.5 seconds of receipt history and ready M1 ATR context.
+5. Breakout reference remains a mandatory trade gate and requires three older received quotes.
+6. Sparse feeds use a safe fallback reference made only from quotes older than the exclusion window.
+7. Warmup scans are written to Recent scans instead of silently returning.
+8. Dashboard shows live tick count, receipt-history span and breakout-reference readiness.
+9. New clean v104 history namespace, Magic Number 2807202604 and order prefix EVETD104.
+10. Confirmed-breakout, compression, persistence, efficiency, spread and MT5 protection rules remain unchanged.

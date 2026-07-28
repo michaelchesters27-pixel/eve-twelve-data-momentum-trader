@@ -139,6 +139,8 @@ function flattenScan(record) {
     rejectionReason: record.rejectionReason, twelveWs: record.twelveWs, twelveRest: record.twelveRest,
     mt5Fresh: record.mt5Fresh, feedDivergenceAtr: record.feedDivergenceAtr,
     twelveTickAgeMs: record.twelveTickAgeMs, twelvePriceFresh: record.twelvePriceFresh,
+    featureTickCount: record.featureTickCount, featureHistorySpanMs: record.featureHistorySpanMs,
+    breakoutReferenceTickCount: record.breakoutReferenceTickCount, breakoutReferenceReady: record.breakoutReferenceReady,
     buyVelocityScore: record.buyVelocityScore, buyPersistenceScore: record.buyPersistenceScore,
     buyBreakoutScore: record.buyBreakoutScore, buyEfficiencyScore: record.buyEfficiencyScore,
     sellVelocityScore: record.sellVelocityScore, sellPersistenceScore: record.sellPersistenceScore,
@@ -164,6 +166,8 @@ function maybeLogScan(tick, assessment) {
     breakoutBuy: latestFeature?.breakoutBuy, breakoutSell: latestFeature?.breakoutSell,
     breakoutBuyDistanceAtr: latestFeature?.breakoutBuyDistanceAtr, breakoutSellDistanceAtr: latestFeature?.breakoutSellDistanceAtr,
     breakoutConfirmed: best.breakoutConfirmed, postBreakoutPersistence: best.postBreakoutPersistence,
+    featureTickCount: latestFeature?.tickCount, featureHistorySpanMs: latestFeature?.historySpanMs,
+    breakoutReferenceTickCount: latestFeature?.referenceTickCount, breakoutReferenceReady: latestFeature?.breakoutReferenceReady,
     buyVelocityScore: latestFeature?.buy?.components?.velocity, buyPersistenceScore: latestFeature?.buy?.components?.persistence,
     buyBreakoutScore: latestFeature?.buy?.components?.breakout, buyEfficiencyScore: latestFeature?.buy?.components?.efficiency,
     sellVelocityScore: latestFeature?.sell?.components?.velocity, sellPersistenceScore: latestFeature?.sell?.components?.persistence,
@@ -176,15 +180,45 @@ function maybeLogScan(tick, assessment) {
     twelveTickAgeMs: best.twelveTickAgeMs, twelvePriceFresh: best.twelvePriceFresh
   }, 'scan');
 }
+function featureWarmReason(feature, context) {
+  const reasons = [...(feature?.warmupReasons || [])];
+  if (!context?.m1?.ready && !reasons.includes('M1_ATR_NOT_READY')) reasons.push('M1_CONTEXT_NOT_READY');
+  if (!feature?.breakoutReferenceReady) reasons.push(`BREAKOUT_REFERENCE_${feature?.referenceTickCount || 0}_OF_${config.breakoutReferenceMinTicks}`);
+  return `LIVE_FEATURE_ENGINE_WARMING | ${reasons.join(' | ') || 'WAITING_FOR_RECEIVED_QUOTES'}`;
+}
+function maybeLogWarmingScan(tick, reason) {
+  if (tick.timestamp - lastScanLoggedAt < config.scanLogSeconds * 1_000) return;
+  lastScanLoggedAt = tick.timestamp;
+  const broker = currentMt5(tick.timestamp);
+  const context = latestContext();
+  store.append('scans', {
+    at: new Date(tick.timestamp).toISOString(), symbol: tick.symbol, price: tick.price,
+    bid: broker.bid, ask: broker.ask, spreadPoints: broker.spreadPoints, spreadAtr: latestFeature?.spreadAtr,
+    session: 'WARMING', decisionAction: 'WAIT', decisionDirection: 'NONE',
+    buyQuality: 0, sellQuality: 0, addAllowed: false,
+    regime: context.regime, m1Direction: context.m1?.direction, m5Direction: context.m5?.direction,
+    m15Direction: context.m15?.direction, h1Direction: context.h1?.direction,
+    breakoutBuy: false, breakoutSell: false, breakoutConfirmed: false,
+    featureTickCount: latestFeature?.tickCount || 0, featureHistorySpanMs: latestFeature?.historySpanMs || 0,
+    breakoutReferenceTickCount: latestFeature?.referenceTickCount || 0,
+    breakoutReferenceReady: Boolean(latestFeature?.breakoutReferenceReady),
+    rejectionReason: reason, buyRejections: [reason], sellRejections: [reason],
+    twelveWs: twelveStatus.ws, twelveRest: twelveStatus.rest, mt5Fresh: broker.fresh,
+    twelveTickAgeMs: 0, twelvePriceFresh: true
+  }, 'scan');
+}
 function onTick(tick) {
   const context = latestContext();
   const processingNow = finite(tick.receivedAt, Date.now());
-  // Market sequencing uses the provider timestamp; freshness and TTL use this server's clock.
-  features.ingest(tick.symbol, tick.price, tick.timestamp);
+  // v1.04 feature sequencing uses Railway receipt time. Provider timestamps may
+  // repeat or arrive sparsely and must never freeze the live scanner warmup.
+  features.ingest(tick.symbol, tick.price, processingNow);
   latestFeature = features.snapshot(tick.symbol, context, currentMt5(processingNow));
   const decisionTick = { ...tick, marketTimestamp: tick.timestamp, timestamp: processingNow };
   if (!latestFeature?.ready) {
-    decision = waitDecision('LIVE_FEATURE_ENGINE_WARMING', null, processingNow);
+    const reason = featureWarmReason(latestFeature, context);
+    decision = waitDecision(reason, null, processingNow);
+    maybeLogWarmingScan(decisionTick, reason);
     return;
   }
   latestAssessment = chooseAssessment({
@@ -235,7 +269,9 @@ function overview() {
       continuationQualityMin: config.continuationQualityMin, signalHoldMs: config.signalHoldMs,
       maxSpreadAtr: config.maxSpreadAtr, timezone: config.timezone, dataNamespace: config.dataNamespace,
       breakoutConfirmMs: config.breakoutConfirmMs, breakoutMinAtr: config.breakoutMinAtr,
-      breakoutPersistenceMin: config.breakoutPersistenceMin, breakoutEfficiencyMin: config.breakoutEfficiencyMin
+      breakoutPersistenceMin: config.breakoutPersistenceMin, breakoutEfficiencyMin: config.breakoutEfficiencyMin,
+      featureWarmMinTicks: config.featureWarmMinTicks, featureWarmMinHistoryMs: config.featureWarmMinHistoryMs,
+      breakoutReferenceMinTicks: config.breakoutReferenceMinTicks
     },
     twelveData: { ...twelveStatus, tickAgeMs: twelveTickAgeMs, priceFresh: twelvePriceFresh, staleAfterMs: config.wsStaleMs },
     mt5: currentMt5(), decision, feature: latestFeature,

@@ -11,7 +11,7 @@ const context={
   m1:{ready:true,regime:'BREAKOUT',extensionAtr:.8,breakout:'UP',closedBreakoutConfirmed:true},
   m5:{direction:'BUY'},m15:{direction:'BUY'},h1:{direction:'BUY'}
 };
-const feature={price:4000,spreadAtr:.05,efficiency:.7,tickExpansion:1.8};
+const feature={price:4000,spreadAtr:.05,efficiency:.7,tickExpansion:1.8,breakoutReferenceReady:true};
 const mt5={fresh:true,bid:3999.98,ask:4000.02,atrM1:2,algoAllowed:true,terminalConnected:true};
 const twelveStatus={lastTickAt:new Date().toISOString()};
 
@@ -49,4 +49,11 @@ test('stale Twelve Data receipt timestamp blocks entry',()=>{
   assert.ok(a.buy.hardBlocks.includes('TWELVE_DATA_PRICE_STALE'));
   assert.equal(a.buy.twelvePriceFresh,false);
   assert.ok(a.buy.twelveTickAgeMs>=20_000);
+});
+
+
+test('incomplete breakout reference blocks trade but still permits assessment',()=>{
+  const a=chooseAssessment({score,feature:{...feature,breakoutReferenceReady:false},context,mt5,twelveStatus,now:Date.now()});
+  assert.equal(a.buy.eligible,false);
+  assert.ok(a.buy.hardBlocks.includes('BREAKOUT_REFERENCE_WARMING'));
 });

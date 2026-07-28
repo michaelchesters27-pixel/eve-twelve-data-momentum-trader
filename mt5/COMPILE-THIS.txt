@@ -1,5 +1,5 @@
 Compile this file in MetaEditor:
 
-EVE_Twelve_Data_Momentum_Trader_v1.03.mq5
+EVE_Twelve_Data_Momentum_Trader_v1.04.mq5
 
-Require 0 errors. Remove v1.01 from the chart before attaching v1.03. Use the same Railway URL and BOT_TOKEN.
+Require 0 errors. Remove v1.03 from the chart before attaching v1.04. Use the same Railway URL and BOT_TOKEN.

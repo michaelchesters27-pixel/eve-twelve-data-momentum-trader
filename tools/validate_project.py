@@ -1,17 +1,17 @@
 from pathlib import Path
 import re, sys
 root=Path(__file__).resolve().parents[1]
-ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.03.mq5'
+ea=root/'mt5/EVE_Twelve_Data_Momentum_Trader_v1.04.mq5'
 server=root/'railway/src/server.js'
 config=root/'railway/src/config.js'
 features=root/'railway/src/features.js'
 decision=root/'railway/src/decision.js'
 tdfile=root/'railway/src/twelve-data.js'
 errors=[]
-if not ea.exists(): errors.append('Missing v1.03 EA file')
+if not ea.exists(): errors.append('Missing v1.04 EA file')
 text=ea.read_text(encoding='utf-8') if ea.exists() else ''
 required=[
- '#property version   "1.03"','2807202603','EVETD103','PlaceInitialScout','remote_decision_quality',
+ '#property version   "1.04"','2807202604','EVETD104','PlaceInitialScout','remote_decision_quality',
  'TWELVE_DATA_CONFIRMED_BREAKOUT_TRADER','InpUseFirstLegFailureExit','InpCloseBasketOnNewestLegSL',
  'InpUseBasketProfitLock','InpRequireScoutProfitBeforeAdd','InpScoutProfitBeforeAddATR','ScoutHasProvenContinuation',
  'trade.Buy(','trade.Sell(','trade.BuyStop(','trade.SellStop(',
@@ -28,11 +28,11 @@ for item in ['TwelveDataClient','chooseAssessment','/api/ea/control','api\\/expo
     if item not in js: errors.append(f'Missing Railway element: {item}')
 
 ft=features.read_text(encoding='utf-8')
-for item in ['breakoutLookbackMs','breakoutExcludeMs','breakoutBuyDistanceAtr','BREAKOUT_REQUIRED','Math.min(score, 69)']:
+for item in ['breakoutLookbackMs','breakoutExcludeMs','breakoutBuyDistanceAtr','BREAKOUT_REQUIRED','Math.min(score, 69)','breakoutReferenceReady','historySpanMs','featureWarmMinTicks']:
     if item not in ft: errors.append(f'Missing breakout feature: {item}')
 
 dt=decision.read_text(encoding='utf-8')
-for item in ['NO_CONFIRMED_${direction}_BREAKOUT','COMPRESSION_WAIT_FOR_CLOSED_EXPANSION','POST_BREAKOUT_PERSISTENCE','POST_BREAKOUT_EFFICIENCY','TICK_EXPANSION_']:
+for item in ['NO_CONFIRMED_${direction}_BREAKOUT','BREAKOUT_REFERENCE_WARMING','COMPRESSION_WAIT_FOR_CLOSED_EXPANSION','POST_BREAKOUT_PERSISTENCE','POST_BREAKOUT_EFFICIENCY','TICK_EXPANSION_']:
     if item not in dt: errors.append(f'Missing decision gate: {item}')
 
 td=tdfile.read_text(encoding='utf-8')

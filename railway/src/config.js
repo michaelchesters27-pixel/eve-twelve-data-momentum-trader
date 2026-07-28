@@ -18,15 +18,15 @@ function listEnv(name, fallback = []) {
 }
 
 export const config = Object.freeze({
-  version: '1.0.3',
+  version: '1.0.4',
   serviceName: 'EVE Twelve Data Momentum Trader',
   mode: 'AUTONOMOUS_DEMO_TRADER',
   port: numEnv('PORT', 3000, 1, 65535),
   botToken: String(process.env.BOT_TOKEN || 'CHANGE-ME').trim(),
   dashboardOrigin: String(process.env.DASHBOARD_ORIGIN || '*').trim(),
   dataDir: String(process.env.DATA_DIR || path.join(__dirname, '..', 'data')).trim(),
-  // v1.03 intentionally starts a clean forward-test sample while leaving older files untouched.
-  dataNamespace: String(process.env.DATA_NAMESPACE || 'v103').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'v103',
+  // v1.04 intentionally starts a clean forward-test sample while leaving older files untouched.
+  dataNamespace: String(process.env.DATA_NAMESPACE || 'v104').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'v104',
   timezone: String(process.env.TIMEZONE || 'Europe/London').trim(),
   autonomousAtStart: boolEnv('AUTO_ENABLED', true),
   twelveDataApiKey: String(process.env.TWELVE_DATA_API_KEY || '').trim(),
@@ -38,6 +38,9 @@ export const config = Object.freeze({
   breakoutConfirmMs: numEnv('BREAKOUT_CONFIRM_MS', 900, 250, 10_000),
   breakoutLookbackMs: numEnv('BREAKOUT_LOOKBACK_MS', 10_000, 3_000, 60_000),
   breakoutExcludeMs: numEnv('BREAKOUT_EXCLUDE_MS', 1_200, 300, 5_000),
+  featureWarmMinTicks: numEnv('FEATURE_WARM_MIN_TICKS', 4, 3, 50),
+  featureWarmMinHistoryMs: numEnv('FEATURE_WARM_MIN_HISTORY_MS', 1_500, 250, 30_000),
+  breakoutReferenceMinTicks: numEnv('BREAKOUT_REFERENCE_MIN_TICKS', 3, 2, 20),
   breakoutMinAtr: numEnv('BREAKOUT_MIN_ATR', 0.015, 0.001, 0.50),
   breakoutPersistenceMin: numEnv('BREAKOUT_PERSISTENCE_MIN', 0.68, 0.50, 0.98),
   breakoutEfficiencyMin: numEnv('BREAKOUT_EFFICIENCY_MIN', 0.48, 0.10, 0.95),

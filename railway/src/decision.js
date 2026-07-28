@@ -26,8 +26,9 @@ export function assessDirection({ direction, score, feature, context, mt5, twelv
   const feedDivergenceAtr = mt5Mid > 0 ? Math.abs(feature.price - mt5Mid) / executionAtr : 0;
   if (feedDivergenceAtr > config.maxFeedDivergenceAtr) hardBlocks.push(`TWELVE_DATA_MT5_DIVERGENCE_${round(feedDivergenceAtr, 3)}_ATR`);
 
-  // v1.03: price speed can never substitute for a real directional break.
-  if (!breakout) hardBlocks.push(`NO_CONFIRMED_${direction}_BREAKOUT`);
+  // v1.04: price speed can never substitute for a real directional break.
+  if (!feature.breakoutReferenceReady) hardBlocks.push('BREAKOUT_REFERENCE_WARMING');
+  else if (!breakout) hardBlocks.push(`NO_CONFIRMED_${direction}_BREAKOUT`);
   if (breakout && breakoutDistanceAtr < config.breakoutMinAtr) {
     hardBlocks.push(`BREAKOUT_DISTANCE_${round(breakoutDistanceAtr, 4)}_ATR_BELOW_${config.breakoutMinAtr}`);
   }
