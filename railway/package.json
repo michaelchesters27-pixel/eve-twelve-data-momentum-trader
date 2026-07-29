@@ -1,10 +1,12 @@
 {
   "name": "eve-twelve-data-momentum-trader",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "private": true,
   "type": "module",
-  "description": "Aggressive XAUUSD fixed 8x8 pending-order ladder with 3.000 spacing, equal 0.01 bullets, Twelve Data telemetry, Railway history and protected MT5 execution.",
-  "engines": { "node": ">=22" },
+  "description": "Fixed XAUUSD 8x8 pending-order ladder with equal 0.01 bullets, halfway BE protection, newest-bullet sentinel, selectable campaign profit target, Twelve Data telemetry and complete campaign replay history.",
+  "engines": {
+    "node": ">=22"
+  },
   "scripts": {
     "start": "node src/server.js",
     "check": "node --check src/server.js && node --check src/features.js && node --check src/twelve-data.js && node --check public/app.js",

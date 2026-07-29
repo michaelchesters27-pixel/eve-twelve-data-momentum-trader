@@ -1,4 +1,4 @@
-EVE FIXED LADDER TRADER v2.10
+EVE FIXED LADDER FLIGHT RECORDER v2.20
 
 THIS REPLACES THE CURRENT PROJECT. DO NOT CREATE A NEW GITHUB REPOSITORY OR RAILWAY SERVICE.
 
@@ -6,30 +6,36 @@ GITHUB
 1. Delete the existing repository contents.
 2. Upload every file and folder from this ZIP.
 3. Commit the replacement.
-4. Railway will redeploy the existing service automatically.
+4. The existing Railway service will redeploy automatically.
 
 RAILWAY
 - Keep the existing BOT_TOKEN.
 - Keep the existing TWELVE_DATA_API_KEY.
 - Keep the existing Twelve Data symbol variables.
-- Keep DATA_DIR and all current networking settings.
+- Keep DATA_DIR and current networking settings.
 - No new Railway variables are required.
-- The default clean history namespace is v210.
+- Clean history namespace: v220.
+- After deployment, open the existing Railway domain and choose Profit Target OFF or a dollar target.
 
 MT5
-1. Remove the old EA from the XAUUSD chart.
-2. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.10.mq5 into MQL5/Experts.
+1. Remove the old EA from the chart.
+2. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.20.mq5 into MQL5/Experts.
 3. Open it in MetaEditor and compile it.
 4. Require 0 compile errors before attaching it.
 5. Attach it to one XAUUSD M1 chart on an IC Markets hedging DEMO account.
 6. Enter the same Railway URL and BOT_TOKEN.
 7. Tick Allow Algo Trading and allow WebRequest for the Railway domain.
-8. Do not run an older EVE EA with the same XAUUSD account at the same time.
+8. Do not run an older EVE EA on the same XAUUSD account at the same time.
 
-WHAT YOU SHOULD SEE
+EXPECTED IDLE STATE
 - 8 BUY STOPs above price.
 - 8 SELL STOPs below price.
-- Exact 3.000 price spacing.
+- Exact 3.000 spacing.
 - 0.01 lot on every level.
-- 2.000 fallback SL on every level.
-- 16 pending orders while idle.
+- 2.000 initial SL on every level.
+- 16 pending orders.
+
+EXPECTED BULLET PROTECTION
+- At +1.500 price movement, that bullet moves to BE plus 0.150.
+- If the newest bullet hits an SL, the complete campaign closes.
+- The bot rearms immediately.

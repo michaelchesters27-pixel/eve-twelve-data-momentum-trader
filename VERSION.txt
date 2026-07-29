@@ -1,8 +1,8 @@
-EVE Fixed Ladder Trader
-Version: 2.10
-Railway package: 2.1.0
-EA: EVE_Twelve_Data_Fixed_Ladder_v2.10.mq5
-Magic number: 2907202621
-Order prefix: EVEL210
-Data namespace: v210
-Strategy: AGGRESSIVE_FIXED_TWO_SIDED_LADDER
+EVE Fixed Ladder Flight Recorder
+EA version: 2.20
+Railway package: 2.2.0
+EA: EVE_Twelve_Data_Fixed_Ladder_v2.20.mq5
+Magic number: 2907202622
+Order prefix: EVEL220
+Data namespace: v220
+Strategy: FIXED_LADDER_FLIGHT_RECORDER

@@ -1,13 +1,18 @@
-EVE Fixed Ladder Trader v2.10 validation
+EVE Fixed Ladder Flight Recorder v2.20 validation
+Validation date: 2026-07-29
 
-- Full project identity: v2.10 / Magic 2907202621 / EVEL210.
-- Fixed ladder defaults: 8 BUY STOPs, 8 SELL STOPs, 3.000 spacing, 0.01 lot, 2.000 fallback.
-- Direction locks only when one side reaches bullet 2.
-- Opposite pending ladder is cancelled and opposite hedge is closed after lock.
-- Newest locked-side bullet is the full-basket sentinel.
-- Basket peak floor enabled with 60% retention after trigger.
+- Full project identity: EA v2.20 / Railway 2.2.0 / Magic 2907202622 / EVEL220.
+- Fixed defaults: 8 BUY STOPs, 8 SELL STOPs, 3.000 spacing, 0.01 lot, 2.000 fallback.
+- Original BUY and SELL ladders remain fixed; there is no direction-lock or opposite-ladder cancellation routine.
+- Every bullet receives halfway BE protection at +1.500 with a 0.150 cost buffer.
+- An SL on the newest bullet requests closure of every remaining position and pending order.
+- Profit target supports OFF, presets and any custom positive dollar amount.
+- Ladder, replay, bullet, BE, order, banking, campaign and market telemetry exports are present.
 - No quality, breakout, timeframe, session or cooldown entry permission remains.
-- Twelve Data is telemetry/history only.
-- Railway JavaScript syntax, automated tests, server smoke test and project source validation passed in the build environment.
+- Twelve Data is telemetry/history only and does not grant or refuse MT5 entries.
+- Railway JavaScript syntax checks passed.
+- 10 automated Node tests passed.
+- Server smoke test passed for health, state, settings, EA control, heartbeat, ladder recording, replay recording/retrieval and CSV export.
+- MQL structural validation passed: required source elements, forbidden old filters, input references, duplicate functions, lexical balance and literal StringFormat argument counts.
 
-MetaEditor is not installed in the build environment. Compile EVE_Twelve_Data_Fixed_Ladder_v2.10.mq5 locally and require 0 errors before attaching it to a hedging demo account.
+MetaEditor is not installed in the build environment. Compile EVE_Twelve_Data_Fixed_Ladder_v2.20.mq5 locally and require 0 errors before attaching it to a hedging demo account.

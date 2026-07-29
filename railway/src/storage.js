@@ -10,14 +10,17 @@ export class JsonlStore {
     fs.mkdirSync(dataDir, { recursive: true });
     this.definitions = {
       scans: { file: `${this.prefix}scans.jsonl`, limit: 100_000 },
-      signals: { file: `${this.prefix}signals.jsonl`, limit: 20_000 },
-      baskets: { file: `${this.prefix}baskets.jsonl`, limit: 20_000 },
-      legs: { file: `${this.prefix}legs.jsonl`, limit: 100_000 },
-      orders: { file: `${this.prefix}orders.jsonl`, limit: 100_000 },
-      banks: { file: `${this.prefix}banks.jsonl`, limit: 50_000 },
-      events: { file: `${this.prefix}events.jsonl`, limit: 20_000 },
-      contexts: { file: `${this.prefix}contexts.jsonl`, limit: 20_000 },
-      mt5: { file: `${this.prefix}mt5-heartbeats.jsonl`, limit: 20_000 }
+      signals: { file: `${this.prefix}signals.jsonl`, limit: 50_000 },
+      baskets: { file: `${this.prefix}campaigns.jsonl`, limit: 50_000 },
+      legs: { file: `${this.prefix}bullets.jsonl`, limit: 200_000 },
+      orders: { file: `${this.prefix}orders.jsonl`, limit: 200_000 },
+      banks: { file: `${this.prefix}banking.jsonl`, limit: 100_000 },
+      ladders: { file: `${this.prefix}ladders.jsonl`, limit: 50_000 },
+      replay: { file: `${this.prefix}replay.jsonl`, limit: 500_000 },
+      protections: { file: `${this.prefix}bullet-protection.jsonl`, limit: 200_000 },
+      events: { file: `${this.prefix}events.jsonl`, limit: 50_000 },
+      contexts: { file: `${this.prefix}contexts.jsonl`, limit: 50_000 },
+      mt5: { file: `${this.prefix}mt5-heartbeats.jsonl`, limit: 50_000 }
     };
     this.collections = {};
     for (const [name, definition] of Object.entries(this.definitions)) this.collections[name] = this.load(definition);

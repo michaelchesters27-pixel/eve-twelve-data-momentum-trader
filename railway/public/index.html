@@ -3,55 +3,93 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>EVE Fixed Ladder Trader</title>
+  <title>EVE Fixed Ladder Flight Recorder</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <main class="shell">
     <header>
-      <div><p class="eyebrow">AGGRESSIVE XAUUSD DEMO ENGINE</p><h1>EVE Fixed Ladder Trader</h1><p id="subtitle">8 BUY STOPs + 8 SELL STOPs · 3.000 spacing · equal 0.01 bullets · newest-leg sentinel</p></div>
+      <div>
+        <p class="eyebrow">XAUUSD FIXED LADDER DEMO ENGINE</p>
+        <h1>EVE Fixed Ladder Flight Recorder</h1>
+        <p>8 BUY STOPs + 8 SELL STOPs · fixed 3.000 spacing · 0.01 every bullet · halfway BE · newest-bullet sentinel</p>
+      </div>
       <div class="auth"><input id="token" type="password" placeholder="BOT_TOKEN" autocomplete="current-password" /><button id="connect">Connect</button></div>
     </header>
 
     <section class="hero grid four">
-      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.1.0</small></article>
+      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.2.0</small></article>
       <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">Telemetry stream</small></article>
       <article class="card"><span>MT5 EA</span><strong id="mt5">OFFLINE</strong><small id="mt5-detail">Waiting for heartbeat</small></article>
       <article class="card"><span>Autonomous</span><strong id="auto">OFF</strong><small id="mode">DEMO</small></article>
     </section>
 
     <section class="decision">
-      <div><p class="eyebrow">LIVE FIXED LADDER</p><h2 id="engine-state">WAITING FOR MT5</h2><p id="reason">No quality score. MT5 preloads both ladders and price chooses the direction.</p></div>
-      <div class="quality"><div><span>POSITIONS</span><b id="positions">0</b></div><div><span>PENDING</span><b id="pending">0</b></div><div><span>LOCKED</span><b id="locked">NO</b></div></div>
+      <div><p class="eyebrow">LIVE FIXED LADDER</p><h2 id="engine-state">WAITING FOR MT5</h2><p id="reason">The original BUY and SELL ladders stay fixed for the complete campaign.</p></div>
+      <div class="quality"><div><span>POSITIONS</span><b id="positions">0</b></div><div><span>PENDING</span><b id="pending">0</b></div><div><span>FLOATING</span><b id="floating">$0.00</b></div></div>
     </section>
 
     <section class="grid four metrics">
-      <article class="card"><span>Baskets</span><strong id="baskets">0</strong><small id="wins">0 wins</small></article>
+      <article class="card"><span>Campaigns</span><strong id="baskets">0</strong><small id="wins">0 wins</small></article>
       <article class="card"><span>Net P/L</span><strong id="net">$0.00</strong><small id="average">$0.00 average</small></article>
       <article class="card"><span>Profit factor</span><strong id="pf">0.00</strong><small id="winrate">0% win rate</small></article>
-      <article class="card"><span>Worst basket</span><strong id="worst">$0.00</strong><small id="best">Best $0.00</small></article>
+      <article class="card"><span>Worst campaign</span><strong id="worst">$0.00</strong><small id="best">Best $0.00</small></article>
+    </section>
+
+    <section class="panel profit-panel">
+      <div>
+        <p class="eyebrow">CAMPAIGN PROFIT TAKE-HOME</p>
+        <h3>Choose when the bot banks and starts again</h3>
+        <p class="muted">OFF lets the campaign run naturally until the newest bullet is stopped. ON closes every position and pending order when the selected floating profit is reached, banks it, then immediately builds a new ladder.</p>
+      </div>
+      <div class="profit-controls">
+        <label class="switch-row"><input id="target-enabled" type="checkbox" /><span>Target mode ON</span></label>
+        <div class="preset-row" id="preset-row">
+          <button type="button" data-target="1">$1</button><button type="button" data-target="3">$3</button><button type="button" data-target="5">$5</button>
+          <button type="button" data-target="7">$7</button><button type="button" data-target="10">$10</button><button type="button" data-target="16">$16</button><button type="button" data-target="25">$25</button>
+        </div>
+        <label>Custom target ($)<input id="target-money" type="number" min="0.01" step="0.01" value="7.00" /></label>
+        <button id="apply-target" class="primary" type="button">Apply profit target</button>
+        <strong id="target-status">Natural mode</strong>
+      </div>
     </section>
 
     <section class="grid two">
+      <article class="panel"><h3>MT5 campaign</h3><div id="execution" class="rows"></div></article>
       <article class="panel"><h3>Twelve Data telemetry</h3><div id="telemetry" class="rows"></div></article>
-      <article class="panel"><h3>MT5 fixed-ladder campaign</h3><div id="execution" class="rows"></div></article>
+    </section>
+
+    <section class="grid four metrics lab">
+      <article class="card"><span>Average bullets</span><strong id="lab-bullets">0.00</strong><small>per campaign</small></article>
+      <article class="card"><span>BE activations</span><strong id="lab-be">0</strong><small>halfway protection events</small></article>
+      <article class="card"><span>Target banks</span><strong id="lab-target">0</strong><small id="lab-target-rate">0% of campaigns</small></article>
+      <article class="card"><span>Newest-bullet exits</span><strong id="lab-fails">0</strong><small id="lab-fail-rate">0% of campaigns</small></article>
     </section>
 
     <section class="controls panel">
       <h3>Controls</h3>
       <div class="buttons">
         <button data-action="ENABLE_AUTO">Enable auto</button><button data-action="DISABLE_AUTO">Disable auto</button>
-        <button data-action="REBUILD_BRACKET">Rebuild bracket</button><button data-action="CLOSE_BASKET">Close basket</button>
+        <button data-action="REBUILD_BRACKET">Rebuild ladder</button><button data-action="CLOSE_BASKET">Close campaign</button>
         <button class="danger" data-action="EMERGENCY_STOP">Emergency stop</button><button data-action="RESET_EMERGENCY">Reset emergency</button>
       </div>
     </section>
 
-    <section class="panel"><div class="section-head"><h3>Recent live records</h3><div class="downloads">
-      <a data-export="scans">Scans CSV</a><a data-export="signals">Signals CSV</a><a data-export="baskets">Baskets CSV</a><a data-export="legs">Legs CSV</a>
-      <a data-export="orders">Orders CSV</a><a data-export="banks">Banking CSV</a>
-    </div></div><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>Direction / state</th><th>1s speed</th><th>3s speed</th><th>Positions</th><th>Pending</th><th>Event</th></tr></thead><tbody id="scans"></tbody></table></div></section>
+    <section class="panel"><div class="section-head"><h3>Campaign history</h3><div class="downloads">
+      <a data-export="baskets">Campaigns CSV</a><a data-export="legs">Bullets CSV</a><a data-export="protections">BE events CSV</a>
+      <a data-export="ladders">Ladders CSV</a><a data-export="replay">Replay CSV</a><a data-export="orders">Orders CSV</a>
+      <a data-export="banks">Banking CSV</a><a data-export="scans">Market telemetry CSV</a>
+    </div></div>
+      <div class="table-wrap"><table><thead><tr><th>Exit</th><th>Campaign</th><th>Side</th><th>Bullets</th><th>P/L</th><th>Peak</th><th>Giveback</th><th>Target</th><th>Reason</th></tr></thead><tbody id="basket-rows"></tbody></table></div>
+    </section>
 
-    <section class="panel"><h3>Recent baskets</h3><div class="table-wrap"><table><thead><tr><th>Exit</th><th>Side</th><th>Bullets</th><th>P/L</th><th>Peak</th><th>Giveback</th><th>Reason</th></tr></thead><tbody id="basket-rows"></tbody></table></div></section>
+    <section class="panel">
+      <div class="section-head"><h3>Campaign replay</h3><div class="replay-controls"><select id="campaign-select"><option value="">Choose a campaign</option></select><button id="load-replay" type="button">Load replay</button></div></div>
+      <div id="replay-summary" class="replay-summary muted">Choose a campaign to view every recorded price snapshot, bullet, BE movement and exit.</div>
+      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Bid</th><th>Ask</th><th>Positions</th><th>Pending</th><th>Floating</th><th>Peak</th><th>Newest</th></tr></thead><tbody id="replay-rows"></tbody></table></div>
+    </section>
+
+    <section class="panel"><h3>Recent live records</h3><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>State</th><th>Positions</th><th>Pending</th><th>Event</th></tr></thead><tbody id="scans"></tbody></table></div></section>
   </main>
   <script src="/app.js"></script>
 </body>

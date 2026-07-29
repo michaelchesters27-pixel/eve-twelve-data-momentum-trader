@@ -1,14 +1,27 @@
-# History and CSV exports
+# Flight recorder and CSV exports
 
-The Railway dashboard retains these exports:
+The clean namespace is `v220`.
 
-- Scans CSV
-- Signals CSV
-- Baskets CSV
-- Legs CSV
-- Orders CSV
-- Banking CSV
+## Campaigns CSV
 
-The clean default namespace is `v210`, so results from the old breakout and v2.00 engines do not mix with this fixed-ladder sample.
+Campaign ID, anchor, start/end, duration, BUY and SELL bullet counts, target mode, net result, peak, MAE, giveback and exit reason.
 
-Orders CSV records all 16 ladder placements, cancellations and rejections. Legs CSV records every fill and close. Baskets CSV records peak, MAE, giveback and the final exit reason.
+## Bullets CSV
+
+Every bullet open and close with side, bullet number, entry/exit price, initial SL, final SL, BE activation, time to BE, MFE, MAE, P/L and close reason.
+
+## BE Events CSV
+
+Every halfway protection event with campaign, bullet, entry, new SL, progress, trigger and buffer.
+
+## Ladders CSV
+
+Every campaign anchor plus all 8 BUY STOP and 8 SELL STOP prices, spacing, lot, fallback and BE geometry.
+
+## Replay CSV
+
+A timed sequence containing broker bid/ask, spread, basket floating/peak P/L, open positions, pending orders and newest bullet. The dashboard can load one campaign and replay its recorded timeline.
+
+## Other exports
+
+Orders, Banking, Market Telemetry, Signals, Events and MT5 heartbeat histories remain available.

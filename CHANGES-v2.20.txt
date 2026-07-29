@@ -1,0 +1,15 @@
+EVE Fixed Ladder Flight Recorder v2.20
+
+1. Kept one fixed 8 BUY STOP + 8 SELL STOP ladder for each campaign.
+2. Kept exact 3.000 spacing and equal 0.01 bullets.
+3. Removed direction locking and removed automatic cancellation of the opposite ladder.
+4. Both original ladders remain fixed for the campaign.
+5. Added halfway protection: each bullet moves to BE + costs after +1.500 movement.
+6. Added a default 0.150 BE cost buffer.
+7. Fixed the sentinel rule: any newest-bullet SL closes every position and pending order.
+8. Added selectable Campaign Profit Target with OFF, $1, $3, $5, $7, $10, $16, $25 and custom values.
+9. Rebuilt MT5/Railway control polling with a safer GET WebRequest call and compact heartbeat.
+10. Added exact heartbeat age and HTTP sync status to the dashboard.
+11. Added ladder, bullet-protection and replay histories.
+12. Added Campaign Laboratory statistics and campaign replay on the dashboard.
+13. Added clean v220 history and Magic 2907202622 / prefix EVEL220.

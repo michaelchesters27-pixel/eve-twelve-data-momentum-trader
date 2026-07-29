@@ -18,14 +18,14 @@ function listEnv(name, fallback = []) {
 }
 
 export const config = Object.freeze({
-  version: '2.1.0',
-  serviceName: 'EVE Fixed Ladder Trader',
-  mode: 'AGGRESSIVE_FIXED_TWO_SIDED_LADDER_DEMO',
+  version: '2.2.0',
+  serviceName: 'EVE Fixed Ladder Flight Recorder',
+  mode: 'FIXED_LADDER_FLIGHT_RECORDER_DEMO',
   port: numEnv('PORT', 3000, 1, 65535),
   botToken: String(process.env.BOT_TOKEN || 'CHANGE-ME').trim(),
   dashboardOrigin: String(process.env.DASHBOARD_ORIGIN || '*').trim(),
   dataDir: String(process.env.DATA_DIR || path.join(__dirname, '..', 'data')).trim(),
-  dataNamespace: String(process.env.BULLET_DATA_NAMESPACE || 'v210').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'v210',
+  dataNamespace: String(process.env.BULLET_DATA_NAMESPACE || 'v220').trim().replace(/[^a-zA-Z0-9_-]/g, '') || 'v220',
   timezone: String(process.env.TIMEZONE || 'Europe/London').trim(),
   autonomousAtStart: boolEnv('AUTO_ENABLED', true),
   twelveDataApiKey: String(process.env.TWELVE_DATA_API_KEY || '').trim(),

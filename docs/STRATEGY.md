@@ -1,41 +1,45 @@
-# EVE Fixed Ladder Trader v2.10 strategy
+# EVE Fixed Ladder Flight Recorder v2.20 strategy
 
 ## Campaign start
 
-When the EA is flat and autonomous trading is enabled, it records the current MT5 midpoint as the campaign anchor and preloads a fixed ladder:
+When flat and autonomous trading is enabled, MT5 records its current midpoint as the anchor and preloads:
 
-- BUY STOP levels: anchor + 3, +6, +9, +12, +15, +18, +21, +24
-- SELL STOP levels: anchor - 3, -6, -9, -12, -15, -18, -21, -24
+- BUY STOPs: anchor +3, +6, +9, +12, +15, +18, +21 and +24
+- SELL STOPs: anchor -3, -6, -9, -12, -15, -18, -21 and -24
 
-Every order is 0.01 lot and has a 2.000 fallback SL.
+Every order is 0.01 lot and begins with a 2.000 broker-side SL.
 
-## Direction selection
+## Fixed ladder
 
-Price chooses the direction. There is no predictive score or timeframe permission.
+The ladder is built once and stays where it was placed. It does not slide with price. The opposite ladder is not cancelled. Price can therefore trigger BUY bullets, SELL bullets or both during the same campaign.
 
-Both ladders remain active after the first bullet. This allows the opposite first-level order to hedge a sharp reversal. The campaign does not lock until one side reaches two filled bullets.
+## Halfway protection
 
-## Direction lock
+Each bullet is tracked independently. When it reaches +1.500 price movement in its favour, its SL moves to:
 
-When a side reaches bullet 2:
+- BUY: entry + 0.150
+- SELL: entry - 0.150
 
-- that side becomes the locked campaign direction;
-- all opposite pending orders are cancelled;
-- any opposite open hedge is closed;
-- remaining same-direction pending levels stay in place.
+This is breakeven plus a small cost buffer.
 
-## Exit
+## Sentinel exit
 
-The newest filled bullet on the locked side is the sentinel. Every bullet has its own 2.000 SL. If the sentinel SL is reached, all remaining positions and pending orders close.
+The most recently filled bullet is the newest bullet and therefore the sentinel.
 
-Basket peak protection is also active after at least two bullets. Once the trigger is met, the basket closes if floating profit falls to 60% of its recorded peak, subject to commission reserve.
+- If it fails before halfway and hits its original SL, close the entire campaign.
+- If it reached halfway, moved to BE and later hits that BE stop, close the entire campaign.
 
-Hard basket loss, hard daily loss, emergency stop, terminal status and catastrophic spread remain the only operating protections.
+The EA cancels every remaining pending order, closes every remaining position and immediately builds a new fixed ladder.
 
-## Rearm
+## Campaign profit target
 
-After all positions and pending orders are flat, the EA records the campaign, resets, anchors a new ladder around the current MT5 price and rearms immediately.
+From the Railway dashboard:
+
+- OFF allows natural sentinel management.
+- ON banks the selected floating campaign profit and immediately rearms.
+
+The selected amount can be $1, $3, $5, $7, $10, $16, $25 or a custom positive value.
 
 ## Twelve Data
 
-Twelve Data records speed, acceleration, tick activity and timeframe context. It never grants or refuses an MT5 ladder order.
+Twelve Data records live speed, acceleration, tick activity and timeframe context. It never grants or refuses a ladder entry.

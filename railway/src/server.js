@@ -6,11 +6,12 @@ import { config } from './config.js';
 import { combinedContext } from './context.js';
 import { LiveFeatureEngine } from './features.js';
 import { JsonlStore } from './storage.js';
-import { finite, integer, nowIso, round, sessionForTimestamp, toCsv } from './utils.js';
+import { finite, integer, nowIso, round, toCsv } from './utils.js';
 import { TwelveDataClient } from './twelve-data.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
+const settingsFile = path.join(config.dataDir, `${config.dataNamespace}-settings.json`);
 const store = new JsonlStore(config.dataDir, config.dataNamespace);
 const features = new LiveFeatureEngine();
 const contexts = {};
@@ -19,19 +20,55 @@ let twelveStatus = { ws: 'WARMING', rest: 'WARMING', lastTickAt: null, lastMarke
 let latestFeature = null;
 let lastScanLoggedAt = 0;
 let mt5 = {
-  account: null, symbol: null, bid: 0, ask: 0, spreadPoints: 0, atrM1: 0,
+  account: null, symbol: null, bid: 0, ask: 0, spreadPoints: 0,
   terminalConnected: false, algoAllowed: false, autonomous: false,
-  positionCount: 0, pendingCount: 0, side: 'NONE', lastSeenAt: null,
-  engineState: 'WAITING FOR MT5', directionLocked: false, directionLegs: 0,
-  lastEvent: 'Waiting for MT5 EA'
+  positionCount: 0, pendingCount: 0, campaignId: '', campaignCurrentSide: 'NONE',
+  campaignBuyLegs: 0, campaignSellLegs: 0, floatingProfit: 0, peakBasketProfit: 0,
+  engineState: 'WAITING FOR MT5', lastSeenAt: null, lastEvent: 'Waiting for MT5 EA', lastHttpStatus: 'Not connected'
 };
 let control = { autonomous: config.autonomousAtStart, emergency: false };
 let command = { id: 0, action: 'NONE', createdAt: null, consumedAt: null, result: null };
 
+function defaultSettings() {
+  return {
+    version: 1,
+    profitTargetEnabled: false,
+    profitTargetMoney: 7,
+    updatedAt: nowIso()
+  };
+}
+function loadSettings() {
+  try {
+    if (!fs.existsSync(settingsFile)) return defaultSettings();
+    const parsed = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+    return normaliseSettings(parsed, false);
+  } catch (error) {
+    console.error('Could not load settings:', error.message);
+    return defaultSettings();
+  }
+}
+function saveSettings(value) {
+  fs.mkdirSync(config.dataDir, { recursive: true });
+  fs.writeFileSync(settingsFile, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+}
+export function normaliseSettings(input = {}, increment = true, current = defaultSettings()) {
+  const enabled = input.profitTargetEnabled === true || String(input.profitTargetEnabled).toLowerCase() === 'true';
+  const moneyRaw = Number(input.profitTargetMoney ?? current.profitTargetMoney ?? 7);
+  const money = Number.isFinite(moneyRaw) ? Math.min(100_000, Math.max(0.01, moneyRaw)) : 7;
+  return {
+    version: increment ? integer(current.version, 0) + 1 : Math.max(1, integer(input.version, 1)),
+    profitTargetEnabled: enabled,
+    profitTargetMoney: round(money, 2),
+    updatedAt: nowIso()
+  };
+}
+let settings = loadSettings();
+
 function latestContext() { return combinedContext(contexts, config.primarySymbol); }
 function currentMt5(now = Date.now()) {
   const last = Date.parse(mt5.lastSeenAt || '');
-  return { ...mt5, fresh: Number.isFinite(last) && now - last <= config.mt5OfflineMs };
+  const heartbeatAgeMs = Number.isFinite(last) ? Math.max(0, now - last) : null;
+  return { ...mt5, heartbeatAgeMs, fresh: heartbeatAgeMs !== null && heartbeatAgeMs <= config.mt5OfflineMs };
 }
 function liveDirection(feature = latestFeature) {
   const v1 = finite(feature?.velocity1Atr);
@@ -54,9 +91,10 @@ function maybeLogTwelveScan(tick) {
     efficiency: finite(latestFeature?.efficiency), regime: context.regime,
     m1Direction: context.m1?.direction || '—', m5Direction: context.m5?.direction || '—',
     m15Direction: context.m15?.direction || '—', h1Direction: context.h1?.direction || '—',
-    mt5Fresh: broker.fresh, engineState: broker.engineState, positions: integer(broker.positionCount),
-    pending: integer(broker.pendingCount), side: broker.side || 'NONE', floatingProfit: finite(broker.floatingProfit),
-    lastEvent: broker.lastEvent || '', note: 'Twelve Data is telemetry only. MT5 fixed-ladder geometry controls entries.'
+    mt5Fresh: broker.fresh, engineState: broker.engineState, campaignId: broker.campaignId || '',
+    positions: integer(broker.positionCount), pending: integer(broker.pendingCount),
+    floatingProfit: finite(broker.floatingProfit), lastEvent: broker.lastEvent || '',
+    note: 'Twelve Data is telemetry only. MT5 fixed-ladder geometry controls all entries.'
   }, 'scan');
 }
 function onTick(tick) {
@@ -75,7 +113,7 @@ const twelve = new TwelveDataClient({
   },
   onStatus: status => { twelveStatus = status; }
 });
-twelve.start();
+if (process.env.NODE_ENV !== 'test') twelve.start();
 store.event('startup', `${config.serviceName} started`, { version: config.version, mode: config.mode, dataNamespace: config.dataNamespace });
 
 export function calculatePerformance(rows) {
@@ -95,16 +133,42 @@ export function calculatePerformance(rows) {
     worstBasket: profits.length ? round(Math.min(...profits), 2) : 0
   };
 }
+
+export function calculateLab(baskets, legs, protections) {
+  const closedLegs = legs.filter(row => String(row.action).toUpperCase() === 'CLOSE');
+  const campaigns = baskets.length;
+  const targetBanks = baskets.filter(row => String(row.exitReason || '').includes('PROFIT TARGET')).length;
+  const newestFailures = baskets.filter(row => String(row.exitReason || '').includes('NEWEST BULLET')).length;
+  const mixed = baskets.filter(row => String(row.side || '').toUpperCase() === 'MIXED').length;
+  const beCount = protections.filter(row => String(row.action || '').toUpperCase() === 'BE_ACTIVATED').length;
+  const mfe = closedLegs.map(row => finite(row.mfePrice)).filter(value => value >= 0);
+  const mae = closedLegs.map(row => finite(row.maePrice)).filter(value => value >= 0);
+  return {
+    campaigns,
+    averageBullets: campaigns ? round(baskets.reduce((sum, row) => sum + integer(row.positionsOpened), 0) / campaigns, 2) : 0,
+    targetBanks,
+    targetBankRate: campaigns ? round(targetBanks / campaigns * 100, 1) : 0,
+    newestFailures,
+    newestFailureRate: campaigns ? round(newestFailures / campaigns * 100, 1) : 0,
+    mixedCampaigns: mixed,
+    mixedCampaignRate: campaigns ? round(mixed / campaigns * 100, 1) : 0,
+    breakEvenActivations: beCount,
+    averageMfePrice: mfe.length ? round(mfe.reduce((a, b) => a + b, 0) / mfe.length, 3) : 0,
+    averageMaePrice: mae.length ? round(mae.reduce((a, b) => a + b, 0) / mae.length, 3) : 0
+  };
+}
+
 function overview() {
   const tickAt = Date.parse(twelveStatus.lastTickAt || '');
   const tickAgeMs = Number.isFinite(tickAt) ? Math.max(0, Date.now() - tickAt) : null;
   return {
     service: config.serviceName, version: config.version, mode: config.mode,
-    control, config: { primarySymbol: config.primarySymbol, timezone: config.timezone, dataNamespace: config.dataNamespace },
+    control, settings,
+    config: { primarySymbol: config.primarySymbol, timezone: config.timezone, dataNamespace: config.dataNamespace },
     twelveData: { ...twelveStatus, tickAgeMs, priceFresh: tickAgeMs !== null && tickAgeMs <= config.wsStaleMs, staleAfterMs: config.wsStaleMs },
     mt5: currentMt5(), feature: latestFeature, context: latestContext(),
     engine: {
-      name: 'AGGRESSIVE FIXED TWO-SIDED LADDER',
+      name: 'FIXED 8×8 LADDER FLIGHT RECORDER',
       entryPermission: 'MT5 LOCAL — NO QUALITY FILTER',
       twelveDataRole: 'LIVE TELEMETRY AND HISTORY ONLY',
       liveDirection: liveDirection(),
@@ -113,10 +177,12 @@ function overview() {
       acceleration: finite(latestFeature?.acceleration)
     },
     performance: calculatePerformance(store.all('baskets')),
-    counts: Object.fromEntries(['scans','signals','baskets','legs','orders','banks','events'].map(name => [name, store.all(name).length])),
-    recentScans: store.list('scans', 150), recentSignals: store.list('signals', 50),
-    recentBaskets: store.list('baskets', 100), recentLegs: store.list('legs', 200),
-    recentOrders: store.list('orders', 200), recentBanks: store.list('banks', 100), recentEvents: store.list('events', 100)
+    lab: calculateLab(store.all('baskets'), store.all('legs'), store.all('protections')),
+    counts: Object.fromEntries(['scans','signals','baskets','legs','orders','banks','ladders','replay','protections','events'].map(name => [name, store.all(name).length])),
+    recentScans: store.list('scans', 100), recentSignals: store.list('signals', 100),
+    recentBaskets: store.list('baskets', 100), recentLegs: store.list('legs', 300),
+    recentOrders: store.list('orders', 300), recentBanks: store.list('banks', 100),
+    recentLadders: store.list('ladders', 50), recentProtections: store.list('protections', 200), recentEvents: store.list('events', 100)
   };
 }
 function parseBody(request) {
@@ -165,14 +231,31 @@ function controlText() {
     `action=${command.consumedAt ? 'NONE' : command.action || 'NONE'}`,
     `autonomous=${control.autonomous ? 'true' : 'false'}`,
     `emergency=${control.emergency ? 'true' : 'false'}`,
-    'settings_version=0', 'fixed_lot=0', 'use_equity_scaling=false', 'equity_per_001_lot=1000',
-    'decision_id=LOCAL_BULLET_ENGINE', 'decision_action=LOCAL', 'decision_direction=NONE',
-    'decision_quality=0', 'decision_buy_quality=0', 'decision_sell_quality=0',
-    'decision_add_allowed=true', `decision_valid_until=${Date.now() + 60_000}`,
-    'decision_ttl_remaining_ms=60000', `server_now_ms=${Date.now()}`,
-    'decision_reason=MT5 FIXED TWO-SIDED LADDER CONTROLS ENTRIES',
-    'decision_regime=LOCAL', 'decision_m5=TELEMETRY', 'decision_m15=TELEMETRY', 'decision_h1=TELEMETRY'
+    `settings_version=${settings.version}`,
+    'fixed_lot=0.01',
+    'use_equity_scaling=false',
+    'equity_per_001_lot=1000',
+    `profit_target_enabled=${settings.profitTargetEnabled ? 'true' : 'false'}`,
+    `profit_target_money=${settings.profitTargetMoney.toFixed(2)}`,
+    'decision_id=LOCAL_FIXED_LADDER', 'decision_action=LOCAL', 'decision_direction=NONE',
+    `server_now_ms=${Date.now()}`,
+    'decision_reason=MT5 FIXED 8X8 LADDER CONTROLS ALL ENTRIES'
   ].join('\n');
+}
+function campaignRecords(campaignId) {
+  const id = String(campaignId || '');
+  const match = row => String(row.campaignId || row.id || '') === id;
+  const byTime = (a, b) => finite(a.at ?? a.dealTime ?? a.receivedAt) - finite(b.at ?? b.dealTime ?? b.receivedAt);
+  return {
+    campaignId: id,
+    basket: store.all('baskets').find(match) || null,
+    ladder: store.all('ladders').find(match) || null,
+    legs: store.all('legs').filter(match).sort(byTime),
+    protections: store.all('protections').filter(match).sort(byTime),
+    orders: store.all('orders').filter(match).sort(byTime),
+    replay: store.all('replay').filter(match).sort(byTime),
+    banks: store.all('banks').filter(match).sort(byTime)
+  };
 }
 
 export function createHttpServer() {
@@ -188,47 +271,57 @@ export function createHttpServer() {
       if (!authorised(request, url, body)) return send(response, 401, { ok: false, error: 'UNAUTHORISED' });
       if (pathname === '/api/state' && request.method === 'GET') return send(response, 200, { ok: true, ...overview() });
       if (pathname === '/api/ea/control' && request.method === 'GET') return send(response, 200, controlText(), 'text/plain; charset=utf-8');
+      if (pathname === '/api/settings' && request.method === 'POST') {
+        settings = normaliseSettings(body, true, settings);
+        saveSettings(settings);
+        store.event('settings', settings.profitTargetEnabled ? `Profit target set to $${settings.profitTargetMoney.toFixed(2)}` : 'Profit target turned OFF — natural mode', settings);
+        return send(response, 200, { ok: true, settings });
+      }
       if (pathname === '/api/ea/heartbeat' && request.method === 'POST') {
         mt5 = {
           ...mt5, ...body,
           bid: finite(body.bid, mt5.bid), ask: finite(body.ask, mt5.ask), spreadPoints: finite(body.spreadPoints, mt5.spreadPoints),
-          atrM1: finite(body.atrM1, mt5.atrM1), balance: finite(body.balance, mt5.balance), equity: finite(body.equity, mt5.equity),
           floatingProfit: finite(body.floatingProfit, mt5.floatingProfit), peakBasketProfit: finite(body.peakBasketProfit, mt5.peakBasketProfit),
           positionCount: integer(body.positionCount, mt5.positionCount), pendingCount: integer(body.pendingCount, mt5.pendingCount),
-          directionLegs: integer(body.directionLegs ?? body.positionsOpened, mt5.directionLegs),
+          campaignBuyLegs: integer(body.campaignBuyLegs, mt5.campaignBuyLegs), campaignSellLegs: integer(body.campaignSellLegs, mt5.campaignSellLegs),
           terminalConnected: String(body.terminalConnected) === 'true' || body.terminalConnected === true,
           algoAllowed: String(body.algoAllowed) === 'true' || body.algoAllowed === true,
           autonomous: String(body.autonomous) === 'true' || body.autonomous === true,
-          directionLocked: String(body.directionLocked) === 'true' || body.directionLocked === true || String(body.engineState || '').includes('LOCKED'),
+          profitTargetEnabled: String(body.profitTargetEnabled) === 'true' || body.profitTargetEnabled === true,
           lastSeenAt: nowIso()
         };
         if (integer(body.consumedCommandId) >= command.id && command.id > 0) {
           command.consumedAt = nowIso(); command.result = body.lastCommandResult || body.lastEvent || 'Consumed';
         }
         if (store.all('mt5').length === 0 || Date.now() - Date.parse(store.all('mt5')[0]?.receivedAt || 0) > 10_000) store.append('mt5', mt5, 'mt5');
-        return send(response, 200, { ok: true, autonomous: control.autonomous });
+        return send(response, 200, { ok: true, autonomous: control.autonomous, settings });
       }
-      const collectionRoutes = { basket: 'baskets', signal: 'signals', leg: 'legs', order: 'orders', bank: 'banks' };
+      const collectionRoutes = {
+        basket: 'baskets', signal: 'signals', leg: 'legs', order: 'orders', bank: 'banks',
+        ladder: 'ladders', replay: 'replay', 'bullet-protection': 'protections'
+      };
       for (const [route, collection] of Object.entries(collectionRoutes)) {
         if (pathname === `/api/ea/${route}` && request.method === 'POST') {
-          const record = route === 'basket' ? store.upsert(collection, body) : store.append(collection, body, route);
-          if (route === 'basket') store.event('basket', `${record.side || 'BASKET'} closed ${finite(record.netProfit).toFixed(2)}`, { exitReason: record.exitReason });
-          return send(response, 200, { ok: true, id: record.id, performance: calculatePerformance(store.all('baskets')) });
+          const record = route === 'basket' || route === 'ladder' ? store.upsert(collection, body) : store.append(collection, body, route);
+          if (route === 'basket') store.event('basket', `${record.side || 'CAMPAIGN'} closed ${finite(record.netProfit).toFixed(2)}`, { campaignId: record.campaignId, exitReason: record.exitReason });
+          return send(response, 200, { ok: true, id: record.id });
         }
       }
       if (pathname === '/api/ea/scan' && request.method === 'POST') return send(response, 200, { ok: true, id: store.append('scans', { ...body, source: 'MT5' }, 'scan').id });
       if (pathname === '/api/ea/event' && request.method === 'POST') return send(response, 200, { ok: true, id: store.event(body.type || 'ea', body.message || 'EA event', body.data || null).id });
+      const replayMatch = pathname.match(/^\/api\/replay\/(.+)$/);
+      if (replayMatch && request.method === 'GET') return send(response, 200, { ok: true, ...campaignRecords(decodeURIComponent(replayMatch[1])) });
       if (pathname === '/api/command' && request.method === 'POST') {
         const action = String(body.action || '').toUpperCase();
         if (action === 'ENABLE_AUTO') { control.autonomous = true; control.emergency = false; store.event('control', 'Autonomous enabled'); return send(response, 200, { ok: true }); }
         if (action === 'DISABLE_AUTO') { control.autonomous = false; store.event('control', 'Autonomous disabled'); return send(response, 200, { ok: true }); }
         if (action === 'EMERGENCY_STOP') { control.autonomous = false; control.emergency = true; return send(response, 200, { ok: true, command: queueCommand(action) }); }
         if (action === 'RESET_EMERGENCY') { control.emergency = false; return send(response, 200, { ok: true, command: queueCommand(action) }); }
-        const supported = new Set(['CLOSE_BASKET','PAUSE_EA','RESUME_EA','PAUSE_ADDING','RESUME_ADDING','REBUILD_BRACKET']);
+        const supported = new Set(['CLOSE_BASKET','PAUSE_EA','RESUME_EA','REBUILD_BRACKET']);
         if (!supported.has(action)) return send(response, 400, { ok: false, error: 'UNSUPPORTED_COMMAND' });
         return send(response, 200, { ok: true, command: queueCommand(action) });
       }
-      const match = pathname.match(/^\/api\/export\/(scans|signals|baskets|legs|orders|banks|events|contexts|mt5)\.csv$/);
+      const match = pathname.match(/^\/api\/export\/(scans|signals|baskets|legs|orders|banks|ladders|replay|protections|events|contexts|mt5)\.csv$/);
       if (match && request.method === 'GET') {
         const collection = match[1];
         return send(response, 200, toCsv([...store.all(collection)].reverse()), 'text/csv; charset=utf-8', { 'Content-Disposition': `attachment; filename="eve-fixed-ladder-${collection}.csv"` });
@@ -248,4 +341,4 @@ if (process.env.NODE_ENV !== 'test') {
   process.on('SIGINT', () => { twelve.stop(); server.close(() => process.exit(0)); });
 }
 
-export { overview, currentMt5, onTick };
+export { overview, currentMt5, onTick, controlText, campaignRecords };
