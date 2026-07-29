@@ -54,7 +54,18 @@ function render(state) {
   const settings = state.settings || {};
   $('target-enabled').checked = Boolean(settings.profitTargetEnabled);
   $('target-money').value = Number(settings.profitTargetMoney || 7).toFixed(2);
-  $('target-status').textContent = settings.profitTargetEnabled ? `ON — bank ${money(settings.profitTargetMoney)} then rearm` : 'OFF — natural sentinel mode';
+  $('target-status').textContent = settings.profitTargetEnabled ? `ON — bank ${money(settings.profitTargetMoney)} then rearm` : 'OFF — natural mode';
+
+  $('daily-loss-enabled').checked = Boolean(settings.dailyLossEnabled);
+  $('daily-loss-money').value = Number(settings.dailyLossMoney || 20).toFixed(2);
+  const dailyPnl = Number(mt5.dailyLossPnl || 0);
+  const dailyRemaining = Number(mt5.dailyLossRemaining ?? settings.dailyLossMoney ?? 20);
+  $('daily-loss-status').textContent = settings.dailyLossEnabled
+    ? (mt5.dailyLossBlocked ? `LOCKED — ${money(settings.dailyLossMoney)} loss limit reached` : `ON — stop at -${money(settings.dailyLossMoney)}`)
+    : 'OFF — no daily lock';
+  $('daily-loss-status').className = mt5.dailyLossBlocked ? 'negative' : settings.dailyLossEnabled ? '' : 'positive';
+  const resetAt = Number(settings.dailyLossResetAtMs || 0);
+  $('daily-loss-detail').textContent = `P/L since reset ${money(dailyPnl)} · allowance remaining ${money(dailyRemaining)} · reset ${resetAt ? formatTime(resetAt) : 'broker midnight'}`;
 
   $('execution').innerHTML = row('Campaign ID', mt5.campaignId || 'Waiting to start') +
     row('Campaign side', mt5.campaignCurrentSide || 'NONE') + row('Unique bullets fired', mt5.uniqueBulletsFired || 0) +
@@ -63,7 +74,9 @@ function render(state) {
     row('Positions', mt5.positionCount || 0) + row('Pending orders', mt5.pendingCount || 0) + row('Anchor', Number(mt5.ladderAnchor || 0).toFixed(3)) +
     row('Grid spacing', Number(mt5.gridSpacing || 3).toFixed(3)) + row('Initial fallback', Number(mt5.fallbackDistance || 2).toFixed(3)) +
     row('Halfway BE trigger', Number(mt5.beTriggerPrice || 1.5).toFixed(3)) + row('BE + costs buffer', Number(mt5.beBufferPrice || 0.15).toFixed(3)) +
-    row('Newest bullet', mt5.newestTicket || '—') + row('Floating P/L', money(mt5.floatingProfit || 0)) + row('Peak P/L', money(mt5.peakBasketProfit || 0));
+    row('Bullet 1 protection', 'At +1.500 → BE + costs') + row('Protected BE exit', 'Close that bullet only') +
+    row('Newest bullet', mt5.newestTicket || '—') + row('Floating P/L', money(mt5.floatingProfit || 0)) + row('Peak P/L', money(mt5.peakBasketProfit || 0)) +
+    row('Daily loss P/L', money(dailyPnl)) + row('Daily loss status', settings.dailyLossEnabled ? (mt5.dailyLossBlocked ? 'LOCKED' : 'ACTIVE') : 'OFF');
 
   const engine = state.engine || {}, context = state.context || {};
   $('telemetry').innerHTML = row('Role', 'Telemetry only — never permission') + row('Live direction', engine.liveDirection || 'MIXED') +
@@ -111,11 +124,26 @@ document.querySelectorAll('[data-target]').forEach(button => button.addEventList
   $('target-enabled').checked = true;
   $('target-money').value = Number(button.dataset.target).toFixed(2);
 }));
+document.querySelectorAll('[data-daily-loss]').forEach(button => button.addEventListener('click', () => {
+  $('daily-loss-enabled').checked = true;
+  $('daily-loss-money').value = Number(button.dataset.dailyLoss).toFixed(2);
+}));
 $('apply-target').addEventListener('click', async () => {
   const payload = { profitTargetEnabled: $('target-enabled').checked, profitTargetMoney: Number($('target-money').value) };
   if (!Number.isFinite(payload.profitTargetMoney) || payload.profitTargetMoney < 0.01) return alert('Enter a target of at least $0.01.');
   const result = await api('/api/settings', { method: 'POST', body: JSON.stringify(payload) });
-  $('target-status').textContent = result.settings.profitTargetEnabled ? `ON — bank ${money(result.settings.profitTargetMoney)} then rearm` : 'OFF — natural sentinel mode';
+  $('target-status').textContent = result.settings.profitTargetEnabled ? `ON — bank ${money(result.settings.profitTargetMoney)} then rearm` : 'OFF — natural mode';
+  refresh();
+});
+$('apply-daily-loss').addEventListener('click', async () => {
+  const payload = { dailyLossEnabled: $('daily-loss-enabled').checked, dailyLossMoney: Number($('daily-loss-money').value) };
+  if (!Number.isFinite(payload.dailyLossMoney) || payload.dailyLossMoney < 0.01) return alert('Enter a daily loss amount of at least $0.01.');
+  await api('/api/settings', { method: 'POST', body: JSON.stringify(payload) });
+  refresh();
+});
+$('reset-daily-loss').addEventListener('click', async () => {
+  if (!confirm('Reset the daily loss counter now and allow a new ladder?')) return;
+  await api('/api/daily-loss/reset', { method: 'POST', body: '{}' });
   refresh();
 });
 $('load-replay').addEventListener('click', async () => {

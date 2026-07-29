@@ -1,84 +1,75 @@
-# EVE Fixed Ladder Flight Recorder v2.30
+# EVE Fixed Ladder Flight Recorder v2.40
 
-This package replaces the current GitHub repository contents while keeping the same Railway service, public domain, `BOT_TOKEN`, Twelve Data connection and existing `v220` campaign history.
+This is a complete replacement for the existing GitHub repository. It keeps the same Railway service, domain, `BOT_TOKEN`, Twelve Data connection, Magic number and `v220` history namespace.
 
-Version 2.30 is an engineering and telemetry rebuild. The trading strategy is deliberately unchanged from v2.20 while the campaign accounting, heartbeat, exit labels and replay history are made consistent.
+## Locked ladder
 
-## Locked trading behaviour
+- 8 fixed BUY STOPs and 8 fixed SELL STOPs.
+- Exact 3.000 XAUUSD spacing.
+- Equal 0.01 lot on every order.
+- Every position begins with a 2.000 broker-side SL.
+- Both original ladders remain fixed. They do not slide and the opposite ladder is not cancelled.
+- No quality score, timeframe permission, session restriction or cooldown.
+- Twelve Data remains telemetry only.
 
-- One fixed ladder is built at the start of each campaign.
-- 8 BUY STOP orders are placed above the anchor.
-- 8 SELL STOP orders are placed below the anchor.
-- Every level is exactly 3.000 XAUUSD price units apart.
-- Every order uses the same 0.01 lot.
-- Every position starts with the same 2.000 broker-side SL.
-- The original BUY and SELL ladders remain fixed. They do not slide and the opposite ladder is not cancelled.
-- Every bullet that reaches +1.500 price movement has its SL moved to breakeven plus a 0.150 cost buffer.
-- The newest filled bullet is always the campaign sentinel.
-- If the newest bullet hits its original SL before halfway, every position and pending order is closed.
-- In this observation build, if the newest protected bullet later hits its BE stop, every position and pending order is also closed.
-- A fresh 8x8 ladder is built immediately after the campaign is flat.
-- No quality score, breakout threshold, timeframe permission, session restriction or cooldown controls entries.
-- Twelve Data is telemetry and historical context only. MT5 broker prices place and manage every order.
+## Bullet protection from Bullet 1 onward
 
-## Campaign profit target
+Every individual bullet uses the same rule, including Position/Bullet 1:
 
-The dashboard provides a selectable take-home target:
+1. The bullet opens with its original 2.000 SL.
+2. When it moves +1.500 in profit, its SL moves to breakeven plus the 0.150 cost buffer.
+3. If a protected BE stop is later hit, only that bullet closes.
+4. Remaining live positions and the fixed pending ladder continue.
+5. If the newest bullet fails before reaching +1.500 and hits its original SL, the complete campaign closes and rearms.
 
-- OFF: let the campaign run under its natural sentinel rules.
-- ON: choose $1, $3, $5, $7, $10, $16, $25 or enter any positive custom amount.
+When a protected Bullet 1 is the only live position and it closes at BE, the campaign is naturally flat, so the old pending ladder is cleared and a fresh ladder is built.
 
-When total floating campaign profit reaches the chosen amount, MT5 closes every position, deletes every pending order, banks the result and immediately starts a new ladder.
+## Campaign profit take-home
 
-## v2.30 accounting and telemetry rebuild
+The dashboard supports OFF, $1, $2, $3, $5, $7, $10, $16, $25 and any positive custom amount.
 
-- A bullet is counted once using its unique MT5 `POSITION_IDENTIFIER`.
-- Duplicate trade callbacks are ignored.
-- BUY bullets fired, SELL bullets fired, unique bullets fired and live positions are reported separately.
-- Campaign history audits the reported bullet total against unique OPEN leg records.
-- Exit records distinguish `INITIAL STOP LOSS` from `BE PROTECTED STOP`.
-- Every ladder, order, bullet, protection, banking and campaign event receives a campaign-wide event sequence.
-- Campaign replay includes an exact ordered event timeline as well as price snapshots.
-- Ladder rebuild records state the real reason instead of incorrectly reporting a new M1 candle.
-- Heartbeat traffic has priority over queued telemetry and uses the `X-Bot-Token` header.
-- The dashboard displays heartbeat sequence, heartbeat age, queue depth and last HTTP status.
+When the basket reaches the chosen floating-profit target, all positions and pending orders close, the profit is banked and a fresh ladder is built immediately.
 
-## Flight recorder exports
+## Daily loss control
 
-The dashboard exports:
+The dashboard now provides:
 
-- Campaigns CSV
-- Bullets CSV
-- BE Events CSV
-- Ladders CSV
-- Replay CSV
-- Orders CSV
-- Banking CSV
-- Market Telemetry CSV
+- Daily loss limit ON/OFF.
+- $5, $10, $20, $30 and $50 presets.
+- Any positive custom dollar amount.
+- `Reset daily loss now`.
+- Live P/L since the latest reset.
+- Remaining loss allowance.
+- Locked/unlocked status and reset time.
 
-Campaign history also shows an audit result:
+OFF means the daily loss rule cannot block new ladders. ON blocks new ladders once realised P/L since the latest reset reaches the chosen negative amount. Resetting clears the counter from that moment and permits immediate rearming. The counter also starts fresh at the next broker day.
 
-- `CONSISTENT`
-- `SYNCING CLOSE RECORDS`
-- `COUNT MISMATCH`
-- `NO BULLET RECORDS`
+## Flight recorder
 
-## Hard protection
+The existing campaign, bullet, protection, ladder, replay, order, banking and market-telemetry exports remain. Exit labels now distinguish:
 
-- Maximum positions: 16
-- Maximum total lots: 0.16
-- Hard basket loss: $5 or 1% of balance, whichever is lower
-- Hard daily loss: $20 or 4% of start-of-day balance, whichever is lower
-- Hard spread limit: 150 broker points
-- Hedging demo account required
+- `INITIAL STOP LOSS`
+- `BE PROTECTED STOP - BULLET ONLY`
+- `NEWEST BULLET FAILED BEFORE HALFWAY - CLOSE FULL CAMPAIGN`
+- profit-target and manual/hard-protection exits
+
+## Hard protection retained
+
+- Maximum positions: 16.
+- Maximum total lots: 0.16.
+- Hard basket loss: $5 or 1% of balance, whichever is lower.
+- Hard spread limit: 150 broker points.
+- Hedging demo account required.
+
+The separate daily loss lock is dashboard-controlled and defaults to OFF in this research build.
 
 ## Identity
 
-- EA: `EVE_Twelve_Data_Fixed_Ladder_v2.30.mq5`
-- EA version: 2.30
+- EA: `EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5`
+- EA version: 2.40
 - Magic number: 2907202622
-- Order prefix: EVEL230
-- Railway package: 2.3.0
+- Order prefix: EVEL240
+- Railway package: 2.4.0
 - Data namespace: v220
 
-The magic number and data namespace are retained intentionally so v2.30 can recover an existing v2.20 campaign and keep the existing dashboard history. Never run v2.20 and v2.30 together.
+Never run v2.30 and v2.40 together. The retained Magic number allows v2.40 to recognise an existing v2.30 campaign during handover.

@@ -24,6 +24,7 @@ let mt5 = {
   terminalConnected: false, algoAllowed: false, autonomous: false,
   positionCount: 0, pendingCount: 0, campaignId: '', campaignCurrentSide: 'NONE',
   campaignBuyLegs: 0, campaignSellLegs: 0, campaignBuyBulletsFired: 0, campaignSellBulletsFired: 0, uniqueBulletsFired: 0, heartbeatSequence: 0, floatingProfit: 0, peakBasketProfit: 0,
+  dailyLossEnabled: false, dailyLossMoney: 20, dailyLossPnl: 0, dailyLossRemaining: 20, dailyLossBlocked: false, dailyLossResetAt: 0,
   engineState: 'WAITING FOR MT5', lastSeenAt: null, lastEvent: 'Waiting for MT5 EA', lastHttpStatus: 'Not connected'
 };
 let control = { autonomous: config.autonomousAtStart, emergency: false };
@@ -34,6 +35,9 @@ function defaultSettings() {
     version: 1,
     profitTargetEnabled: false,
     profitTargetMoney: 7,
+    dailyLossEnabled: false,
+    dailyLossMoney: 20,
+    dailyLossResetAtMs: 0,
     updatedAt: nowIso()
   };
 }
@@ -51,14 +55,27 @@ function saveSettings(value) {
   fs.mkdirSync(config.dataDir, { recursive: true });
   fs.writeFileSync(settingsFile, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
 }
+function settingBoolean(input, key, fallback) {
+  if (!(key in input) || input[key] === undefined || input[key] === null || input[key] === '') return Boolean(fallback);
+  return input[key] === true || ['1', 'true', 'yes', 'on'].includes(String(input[key]).toLowerCase());
+}
+
 export function normaliseSettings(input = {}, increment = true, current = defaultSettings()) {
-  const enabled = input.profitTargetEnabled === true || String(input.profitTargetEnabled).toLowerCase() === 'true';
-  const moneyRaw = Number(input.profitTargetMoney ?? current.profitTargetMoney ?? 7);
-  const money = Number.isFinite(moneyRaw) ? Math.min(100_000, Math.max(0.01, moneyRaw)) : 7;
+  const targetEnabled = settingBoolean(input, 'profitTargetEnabled', current.profitTargetEnabled ?? false);
+  const targetRaw = Number(input.profitTargetMoney ?? current.profitTargetMoney ?? 7);
+  const targetMoney = Number.isFinite(targetRaw) ? Math.min(100_000, Math.max(0.01, targetRaw)) : 7;
+  const dailyLossEnabled = settingBoolean(input, 'dailyLossEnabled', current.dailyLossEnabled ?? false);
+  const dailyLossRaw = Number(input.dailyLossMoney ?? current.dailyLossMoney ?? 20);
+  const dailyLossMoney = Number.isFinite(dailyLossRaw) ? Math.min(100_000, Math.max(0.01, dailyLossRaw)) : 20;
+  const resetRaw = Number(input.dailyLossResetAtMs ?? current.dailyLossResetAtMs ?? 0);
+  const dailyLossResetAtMs = Number.isFinite(resetRaw) ? Math.max(0, Math.trunc(resetRaw)) : 0;
   return {
     version: increment ? integer(current.version, 0) + 1 : Math.max(1, integer(input.version, 1)),
-    profitTargetEnabled: enabled,
-    profitTargetMoney: round(money, 2),
+    profitTargetEnabled: targetEnabled,
+    profitTargetMoney: round(targetMoney, 2),
+    dailyLossEnabled,
+    dailyLossMoney: round(dailyLossMoney, 2),
+    dailyLossResetAtMs,
     updatedAt: nowIso()
   };
 }
@@ -303,6 +320,9 @@ function controlText() {
     'equity_per_001_lot=1000',
     `profit_target_enabled=${settings.profitTargetEnabled ? 'true' : 'false'}`,
     `profit_target_money=${settings.profitTargetMoney.toFixed(2)}`,
+    `daily_loss_enabled=${settings.dailyLossEnabled ? 'true' : 'false'}`,
+    `daily_loss_money=${settings.dailyLossMoney.toFixed(2)}`,
+    `daily_loss_reset_at_ms=${Math.trunc(settings.dailyLossResetAtMs || 0)}`,
     'decision_id=LOCAL_FIXED_LADDER', 'decision_action=LOCAL', 'decision_direction=NONE',
     `server_now_ms=${Date.now()}`,
     'decision_reason=MT5 FIXED 8X8 LADDER CONTROLS ALL ENTRIES'
@@ -341,7 +361,15 @@ export function createHttpServer() {
       if (pathname === '/api/settings' && request.method === 'POST') {
         settings = normaliseSettings(body, true, settings);
         saveSettings(settings);
-        store.event('settings', settings.profitTargetEnabled ? `Profit target set to $${settings.profitTargetMoney.toFixed(2)}` : 'Profit target turned OFF — natural mode', settings);
+        const targetText = settings.profitTargetEnabled ? `profit target $${settings.profitTargetMoney.toFixed(2)}` : 'profit target OFF';
+        const dailyText = settings.dailyLossEnabled ? `daily loss $${settings.dailyLossMoney.toFixed(2)}` : 'daily loss OFF';
+        store.event('settings', `${targetText} | ${dailyText}`, settings);
+        return send(response, 200, { ok: true, settings });
+      }
+      if (pathname === '/api/daily-loss/reset' && request.method === 'POST') {
+        settings = normaliseSettings({ dailyLossResetAtMs: Date.now() }, true, settings);
+        saveSettings(settings);
+        store.event('settings', 'Daily loss counter reset from dashboard', settings);
         return send(response, 200, { ok: true, settings });
       }
       if (pathname === '/api/ea/heartbeat' && request.method === 'POST') {
@@ -359,6 +387,12 @@ export function createHttpServer() {
           algoAllowed: String(body.algoAllowed) === 'true' || body.algoAllowed === true,
           autonomous: String(body.autonomous) === 'true' || body.autonomous === true,
           profitTargetEnabled: String(body.profitTargetEnabled) === 'true' || body.profitTargetEnabled === true,
+          dailyLossEnabled: String(body.dailyLossEnabled) === 'true' || body.dailyLossEnabled === true,
+          dailyLossMoney: finite(body.dailyLossMoney, mt5.dailyLossMoney),
+          dailyLossPnl: finite(body.dailyLossPnl, mt5.dailyLossPnl),
+          dailyLossRemaining: finite(body.dailyLossRemaining, mt5.dailyLossRemaining),
+          dailyLossBlocked: String(body.dailyLossBlocked) === 'true' || body.dailyLossBlocked === true,
+          dailyLossResetAt: finite(body.dailyLossResetAt, mt5.dailyLossResetAt),
           lastSeenAt: nowIso()
         };
         if (integer(body.consumedCommandId) >= command.id && command.id > 0) {

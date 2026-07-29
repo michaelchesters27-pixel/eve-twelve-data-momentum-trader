@@ -1,6 +1,6 @@
 # Flight recorder, audit and CSV exports
 
-The data namespace remains `v220` so the existing history is preserved across the v2.30 deployment.
+The data namespace remains `v220` so the existing history is preserved across the v2.40 deployment.
 
 ## Campaign-wide sequence
 
@@ -27,7 +27,7 @@ Every unique bullet OPEN and CLOSE record with side, bullet number, position ide
 The expected SL labels are:
 
 - `INITIAL STOP LOSS`
-- `BE PROTECTED STOP`
+- `BE PROTECTED STOP - BULLET ONLY`
 
 ## BE Events CSV
 

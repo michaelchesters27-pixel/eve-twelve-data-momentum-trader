@@ -1,20 +1,29 @@
-EVE Fixed Ladder Flight Recorder v2.30 validation
+EVE FIXED LADDER FLIGHT RECORDER v2.40 VALIDATION
+Date: 2026-07-29
 
-Completed in the build environment:
-- Full project identity checked: EA v2.30 / Railway 2.3.0 / Magic 2907202622 / EVEL230.
-- Locked 8x8 ladder geometry, 3.000 spacing, 0.01 lot, 2.000 SL, +1.500 BE trigger and +0.150 buffer checked in source.
-- No quality, breakout, timeframe or session filter is used by EntryBlockReason.
-- Opposite ladder cancellation is absent from the trading path.
-- Unique POSITION_IDENTIFIER bullet accounting and duplicate-deal protection checked in source.
-- Exact INITIAL STOP LOSS and BE PROTECTED STOP labels checked in source.
-- Campaign eventSequence, campaign audit and timeline replay checked in source.
-- Heartbeat X-Bot-Token header and heartbeat-priority queue checked in source.
-- JavaScript syntax checks completed.
-- Automated Railway tests completed.
-- Python project source validator completed.
-- Local HTTP smoke test passed for /health, authenticated EA heartbeat and authenticated dashboard state.
-- ZIP integrity test completed after packaging.
+PASSED
+- Project source validation.
+- MQL lexical bracket/string/comment balance.
+- MQL StringFormat placeholder/argument count validation.
+- Required input/function/API presence checks.
+- Forbidden conservative entry-filter checks.
+- JavaScript syntax checks for Railway server, feature engine, Twelve Data client and dashboard.
+- 13 Railway automated tests.
+- Profit-target partial settings test.
+- Daily-loss ON/OFF/custom/reset settings test.
+- Campaign accounting and audit tests.
+- Railway settings/reset/control/heartbeat smoke test.
 
-Not available in this build environment:
-- MetaEditor is not installed. Compile EVE_Twelve_Data_Fixed_Ladder_v2.30.mq5 locally and require 0 errors before attaching it to a hedging demo account.
-- Live MT5 broker execution and Railway production deployment must be verified after installation.
+LOCKED SOURCE BEHAVIOUR VERIFIED
+- 8 BUY STOP + 8 SELL STOP fixed ladder.
+- 3.000 spacing and 0.01 equal lots.
+- 2.000 initial SL.
+- Bullet 1 onward moves to BE +0.150 at +1.500.
+- BE-protected SL closes that bullet only.
+- Newest unprotected original SL closes the complete campaign.
+- Profit target supports OFF, $2 preset and custom amounts.
+- Daily loss supports ON/OFF, custom amount and reset-now.
+- Existing v220 history namespace and Magic 2907202622 retained.
+
+NOT AVAILABLE IN THIS ENVIRONMENT
+- MetaEditor/MT5 compilation. Compile EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5 locally and require 0 errors before attaching.

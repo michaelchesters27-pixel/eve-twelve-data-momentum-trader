@@ -1,25 +1,26 @@
 from pathlib import Path
 import re, sys
 root=Path(__file__).resolve().parents[1]
-ea=root/'mt5/EVE_Twelve_Data_Fixed_Ladder_v2.30.mq5'
+ea=root/'mt5/EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5'
 required=[ea,root/'railway/src/server.js',root/'railway/src/config.js',root/'railway/src/twelve-data.js',root/'railway/public/index.html',root/'railway/public/app.js',root/'railway/package.json',root/'README.md',root/'DEPLOY-THIS-FIRST.txt']
 errors=[]
 for f in required:
     if not f.exists(): errors.append(f'Missing required file: {f.relative_to(root)}')
 text=ea.read_text(encoding='utf-8') if ea.exists() else ''
 required_ea=[
- '#property version   "2.30"','2907202622','EVEL230','FIXED_LADDER_FLIGHT_RECORDER',
+ '#property version   "2.40"','2907202622','EVEL240','FIXED_LADDER_FLIGHT_RECORDER',
  'InpLevelsPerSide                  = 8','InpGridSpacingPrice               = 3.000','InpFixedFallbackPrice             = 2.000',
  'InpFixedLot                       = 0.01','InpBreakEvenTriggerPrice          = 1.500','InpBreakEvenBufferPrice           = 0.150',
  'InpProfitTargetEnabledAtStart','runtime_profit_target_enabled','runtime_profit_target_money',
+ 'InpDailyLossEnabledAtStart','runtime_daily_loss_enabled','runtime_daily_loss_money','daily_loss_reset_at_ms','DailyLossRemaining()',
  'ArmFreshTwoSidedBracket','trade.BuyStop(','trade.SellStop(','RegisterBullet(','UpdateBulletMetrics(',
- 'ManageIndividualProtection(','BE_ACTIVATED','NEWEST BULLET FAILED BEFORE HALFWAY','NEWEST BULLET BE STOP',
+ 'ManageIndividualProtection(','BE_ACTIVATED','NEWEST BULLET FAILED BEFORE HALFWAY','BE PROTECTED STOP - BULLET ONLY',
  'CAMPAIGN PROFIT TARGET','UNIQUE_POSITION_IDENTIFIER','eventSequence','campaignBuyBulletsFired','INITIAL STOP LOSS','BE PROTECTED STOP','MaybeQueueReplaySnapshot','QueueLadderReport','/api/ea/replay','/api/ea/ladder','/api/ea/bullet-protection',
  '/api/ea/heartbeat','/api/ea/basket','/api/ea/leg','/api/ea/order','/api/ea/bank','EntryBlockReason()'
 ]
 for item in required_ea:
     if item not in text: errors.append(f'Missing EA element: {item}')
-for forbidden in ['#property version   "1.04"','EVETD104','TWELVE_DATA_CONFIRMED_BREAKOUT_TRADER','NO_CONFIRMED_BUY_BREAKOUT','NO_CONFIRMED_SELL_BREAKOUT','BUY_QUALITY_','SELL_QUALITY_','CancelPendingSide(OppositeSide(campaign_side)']:
+for forbidden in ['NEWEST BULLET BE STOP - CLOSE FULL CAMPAIGN','#property version   "1.04"','EVETD104','TWELVE_DATA_CONFIRMED_BREAKOUT_TRADER','NO_CONFIRMED_BUY_BREAKOUT','NO_CONFIRMED_SELL_BREAKOUT','BUY_QUALITY_','SELL_QUALITY_','CancelPendingSide(OppositeSide(campaign_side)']:
     if forbidden in text: errors.append(f'Stale or forbidden element: {forbidden}')
 # EntryBlockReason can only use hard operating/capital checks.
 m=re.search(r'string\s+EntryBlockReason\s*\(\s*\)\s*\{(?P<body>.*?)\n\}',text,re.S)
@@ -106,10 +107,10 @@ for sm in re.finditer(r'\bStringFormat\s*\(',text):
 server=(root/'railway/src/server.js').read_text() if (root/'railway/src/server.js').exists() else ''
 cfg=(root/'railway/src/config.js').read_text() if (root/'railway/src/config.js').exists() else ''
 ui=(root/'railway/public/index.html').read_text()+(root/'railway/public/app.js').read_text()
-for item in ['FIXED 8×8 LADDER FLIGHT RECORDER','profitTargetEnabled','/api/settings','/api/replay/','ladders','replay','protections','eve-fixed-ladder-${collection}.csv','auditCampaign','campaignTimeline']:
+for item in ['FIXED 8×8 LADDER FLIGHT RECORDER','profitTargetEnabled','dailyLossEnabled','/api/daily-loss/reset','/api/settings','/api/replay/','ladders','replay','protections','eve-fixed-ladder-${collection}.csv','auditCampaign','campaignTimeline']:
     if item not in server+ui: errors.append(f'Missing Railway/UI element: {item}')
-for item in ["version: '2.3.0'","mode: 'FIXED_LADDER_FLIGHT_RECORDER_DEMO'","BULLET_DATA_NAMESPACE || 'v220'"]:
-    if item not in cfg: errors.append(f'Missing v2.30 config: {item}')
+for item in ["version: '2.4.0'","mode: 'FIXED_LADDER_FLIGHT_RECORDER_DEMO'","BULLET_DATA_NAMESPACE || 'v220'"]:
+    if item not in cfg: errors.append(f'Missing v2.40 config: {item}')
 if errors:
     print('\n'.join('ERROR: '+e for e in errors)); sys.exit(1)
 print('Project source validation passed.')

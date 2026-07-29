@@ -1,15 +1,24 @@
-EVE FIXED LADDER FLIGHT RECORDER v2.30
+EVE FIXED LADDER FLIGHT RECORDER v2.40
 
 THIS REPLACES THE CURRENT PROJECT. DO NOT CREATE A NEW GITHUB REPOSITORY OR RAILWAY SERVICE.
 
-WHAT v2.30 CHANGES
-- Trading strategy stays the same as v2.20.
-- Unique bullets are counted by MT5 POSITION_IDENTIFIER.
-- Duplicate deal callbacks are ignored.
-- Initial SL and BE-protected exits have separate labels.
-- Every campaign has a sequenced event timeline and an accounting audit.
-- Heartbeat has priority over telemetry and reports clearer HTTP diagnostics.
-- Ladder rebuild history now records the true rebuild reason.
+WHAT v2.40 CHANGES
+- Bullet 1 now explicitly follows the same halfway protection rule as every later bullet.
+- At +1.500, each bullet moves to BE plus the 0.150 cost buffer.
+- A BE-protected stop closes that bullet only.
+- Only the newest bullet hitting its original SL before halfway closes the complete campaign.
+- Dashboard daily loss limit can be turned ON/OFF, set to any dollar amount and reset immediately.
+- Dashboard shows P/L since reset, remaining allowance and lock status.
+- Profit target now includes a $2 preset.
+
+UNCHANGED
+- Fixed 8 BUY STOP + 8 SELL STOP ladder.
+- Exact 3.000 spacing.
+- 0.01 every order.
+- 2.000 initial SL.
+- Both fixed ladders stay active.
+- Profit target control and all flight-recorder exports.
+- Twelve Data is telemetry only.
 
 GITHUB
 1. Delete the existing repository contents.
@@ -19,47 +28,33 @@ GITHUB
 
 RAILWAY
 - Keep the existing BOT_TOKEN.
-- Keep the existing TWELVE_DATA_API_KEY.
-- Keep the existing Twelve Data symbol variables.
+- Keep the existing TWELVE_DATA_API_KEY and symbol variables.
 - Keep DATA_DIR and current networking settings.
-- Do not create a new Railway service.
 - No new Railway variables are required.
-- Data namespace remains v220 so existing history stays visible.
-- After deployment, open the existing Railway domain and confirm version 2.3.0.
-- Choose Profit Target OFF or enter the required dollar target.
+- Data namespace remains v220, so existing history remains visible.
+- Confirm the dashboard reports version 2.4.0.
+- Set the campaign profit target required.
+- Set Daily Loss OFF for unrestricted demo collection, or ON with the required amount.
+- Use Reset daily loss now whenever the current lock must be cleared.
 
 MT5
-1. Turn off or remove the old EA before attaching v2.30.
-2. Do not run v2.20 and v2.30 at the same time. They intentionally share the same magic number for safe handover.
-3. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.30.mq5 into MQL5/Experts.
-4. Open it in MetaEditor and compile it.
-5. Require 0 compile errors before attaching it.
-6. Attach it to one XAUUSD M1 chart on an IC Markets hedging DEMO account.
-7. Enter the same Railway URL and BOT_TOKEN.
-8. Tick Allow Algo Trading.
-9. Add the Railway base domain under Tools > Options > Expert Advisors > Allow WebRequest for listed URL.
-10. Confirm the dashboard changes from MT5 EA OFFLINE to ONLINE and that heartbeat age continues updating.
+1. Remove v2.30 before attaching v2.40.
+2. Copy `mt5/EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5` into MQL5/Experts.
+3. Compile in MetaEditor and require 0 errors.
+4. Attach it to one XAUUSD M1 chart on an IC Markets hedging DEMO account.
+5. Use the same Railway URL and BOT_TOKEN.
+6. Enable Algo Trading and keep the Railway domain in the allowed WebRequest list.
+7. Confirm MT5 EA shows ONLINE and heartbeat age keeps updating.
 
 SAFE HANDOVER
-- v2.30 retains Magic 2907202622 and data namespace v220.
-- This lets it recognise and manage existing v2.20 positions and pending orders after a restart.
-- Do not manually duplicate the ladder by leaving the old EA attached.
+- v2.40 retains Magic 2907202622 and data namespace v220.
+- This lets it recognise v2.30 positions and orders during handover.
+- Never leave both EA versions attached.
 
-EXPECTED IDLE STATE
-- 8 BUY STOPs above price.
-- 8 SELL STOPs below price.
-- Exact 3.000 spacing.
-- 0.01 lot on every level.
-- 2.000 initial SL on every level.
-- 16 pending orders.
-
-EXPECTED BULLET PROTECTION
-- At +1.500 price movement, that bullet moves to BE plus 0.150.
-- If the newest bullet hits either its initial SL or its BE-protected SL, this observation build closes the complete campaign.
-- The bot then rearms immediately.
-
-EXPECTED HISTORY
-- Campaign bullet totals should match unique OPEN bullet records.
-- Exit labels should show INITIAL STOP LOSS or BE PROTECTED STOP.
-- Campaign history should show CONSISTENT after all close records arrive.
-- Replay should show both the ordered event timeline and the price snapshots.
+EXPECTED BULLET BEHAVIOUR
+- Bullet 1 opens with the 2.000 SL.
+- At +1.500 it moves to BE +0.150.
+- If that protected stop is hit, Bullet 1 closes at protected BE.
+- If it was the only live bullet, the campaign finishes flat/near-flat and rearms.
+- If other bullets remain, they continue.
+- A newest unprotected bullet hitting its original SL closes the complete campaign.

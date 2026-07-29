@@ -12,13 +12,13 @@
       <div>
         <p class="eyebrow">XAUUSD FIXED LADDER DEMO ENGINE</p>
         <h1>EVE Fixed Ladder Flight Recorder</h1>
-        <p>8 BUY STOPs + 8 SELL STOPs · fixed 3.000 spacing · 0.01 every bullet · halfway BE · newest-bullet sentinel</p>
+        <p>8 BUY STOPs + 8 SELL STOPs · fixed 3.000 spacing · 0.01 every bullet · every bullet earns BE at halfway · newest initial-SL sentinel</p>
       </div>
       <div class="auth"><input id="token" type="password" placeholder="BOT_TOKEN" autocomplete="current-password" /><button id="connect">Connect</button></div>
     </header>
 
     <section class="hero grid four">
-      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.3.0</small></article>
+      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.4.0</small></article>
       <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">Telemetry stream</small></article>
       <article class="card"><span>MT5 EA</span><strong id="mt5">OFFLINE</strong><small id="mt5-detail">Waiting for heartbeat</small></article>
       <article class="card"><span>Autonomous</span><strong id="auto">OFF</strong><small id="mode">DEMO</small></article>
@@ -40,17 +40,36 @@
       <div>
         <p class="eyebrow">CAMPAIGN PROFIT TAKE-HOME</p>
         <h3>Choose when the bot banks and starts again</h3>
-        <p class="muted">OFF lets the campaign run naturally until the newest bullet is stopped. ON closes every position and pending order when the selected floating profit is reached, banks it, then immediately builds a new ladder.</p>
+        <p class="muted">OFF lets the campaign run naturally. A newest bullet that fails before halfway closes the campaign; a BE-protected bullet closes only itself. ON closes every position and pending order when the selected floating profit is reached, banks it, then immediately builds a new ladder.</p>
       </div>
       <div class="profit-controls">
         <label class="switch-row"><input id="target-enabled" type="checkbox" /><span>Target mode ON</span></label>
         <div class="preset-row" id="preset-row">
-          <button type="button" data-target="1">$1</button><button type="button" data-target="3">$3</button><button type="button" data-target="5">$5</button>
+          <button type="button" data-target="1">$1</button><button type="button" data-target="2">$2</button><button type="button" data-target="3">$3</button><button type="button" data-target="5">$5</button>
           <button type="button" data-target="7">$7</button><button type="button" data-target="10">$10</button><button type="button" data-target="16">$16</button><button type="button" data-target="25">$25</button>
         </div>
         <label>Custom target ($)<input id="target-money" type="number" min="0.01" step="0.01" value="7.00" /></label>
         <button id="apply-target" class="primary" type="button">Apply profit target</button>
         <strong id="target-status">Natural mode</strong>
+      </div>
+    </section>
+
+    <section class="panel profit-panel">
+      <div>
+        <p class="eyebrow">DAILY LOSS CONTROL</p>
+        <h3>Choose the daily stop or turn it off</h3>
+        <p class="muted">OFF keeps the demo running. ON blocks new ladders when the loss since the latest reset reaches your chosen amount. Reset clears the counter immediately and allows a fresh ladder.</p>
+      </div>
+      <div class="profit-controls">
+        <label class="switch-row"><input id="daily-loss-enabled" type="checkbox" /><span>Daily loss limit ON</span></label>
+        <div class="preset-row">
+          <button type="button" data-daily-loss="5">$5</button><button type="button" data-daily-loss="10">$10</button><button type="button" data-daily-loss="20">$20</button>
+          <button type="button" data-daily-loss="30">$30</button><button type="button" data-daily-loss="50">$50</button>
+        </div>
+        <label>Custom daily loss ($)<input id="daily-loss-money" type="number" min="0.01" step="0.01" value="20.00" /></label>
+        <div class="buttons"><button id="apply-daily-loss" class="primary" type="button">Apply daily loss</button><button id="reset-daily-loss" type="button">Reset daily loss now</button></div>
+        <strong id="daily-loss-status">OFF — no daily lock</strong>
+        <small id="daily-loss-detail">P/L since reset $0.00</small>
       </div>
     </section>
 

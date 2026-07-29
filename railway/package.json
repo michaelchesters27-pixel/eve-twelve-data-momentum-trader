@@ -1,9 +1,9 @@
 {
   "name": "eve-twelve-data-momentum-trader",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "private": true,
   "type": "module",
-  "description": "Fixed XAUUSD 8x8 pending-order ladder with equal 0.01 bullets, halfway BE protection, newest-bullet sentinel, selectable campaign profit target, Twelve Data telemetry and consistent campaign audit, timeline replay and complete campaign history.",
+  "description": "Fixed XAUUSD 8x8 pending-order ladder where Bullet 1 onward earns halfway BE protection, protected stops close one bullet, newest initial-SL failure closes the campaign, and profit/daily-loss controls are selectable from the dashboard.",
   "engines": {
     "node": ">=22"
   },

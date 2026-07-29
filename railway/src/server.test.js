@@ -3,12 +3,27 @@ import assert from 'node:assert/strict';
 import { auditCampaign, calculateLab, calculatePerformance, normaliseSettings } from './server.js';
 
 test('profit target settings support OFF and any positive custom dollar amount', () => {
-  const current = { version: 4, profitTargetEnabled: false, profitTargetMoney: 7 };
+  const current = { version: 4, profitTargetEnabled: false, profitTargetMoney: 7, dailyLossEnabled: false, dailyLossMoney: 20, dailyLossResetAtMs: 0 };
   const on = normaliseSettings({ profitTargetEnabled: true, profitTargetMoney: 16 }, true, current);
   assert.deepEqual({ enabled: on.profitTargetEnabled, money: on.profitTargetMoney, version: on.version }, { enabled: true, money: 16, version: 5 });
   const off = normaliseSettings({ profitTargetEnabled: false, profitTargetMoney: 1 }, true, on);
   assert.equal(off.profitTargetEnabled, false);
   assert.equal(off.profitTargetMoney, 1);
+});
+
+test('daily loss settings can be turned on off changed and reset without changing profit target', () => {
+  const current = { version: 8, profitTargetEnabled: true, profitTargetMoney: 2, dailyLossEnabled: false, dailyLossMoney: 20, dailyLossResetAtMs: 0 };
+  const enabled = normaliseSettings({ dailyLossEnabled: true, dailyLossMoney: 35 }, true, current);
+  assert.equal(enabled.profitTargetEnabled, true);
+  assert.equal(enabled.profitTargetMoney, 2);
+  assert.equal(enabled.dailyLossEnabled, true);
+  assert.equal(enabled.dailyLossMoney, 35);
+  const reset = normaliseSettings({ dailyLossResetAtMs: 1_785_345_678_901 }, true, enabled);
+  assert.equal(reset.dailyLossResetAtMs, 1_785_345_678_901);
+  assert.equal(reset.dailyLossEnabled, true);
+  const disabled = normaliseSettings({ dailyLossEnabled: false }, true, reset);
+  assert.equal(disabled.dailyLossEnabled, false);
+  assert.equal(disabled.dailyLossMoney, 35);
 });
 
 test('campaign performance uses closed campaign P/L', () => {
@@ -31,7 +46,6 @@ test('campaign laboratory counts targets, newest-bullet exits and BE activations
   assert.equal(output.mixedCampaigns, 1);
   assert.equal(output.breakEvenActivations, 2);
 });
-
 
 test('campaign audit catches the exact mismatch seen in v2.20', () => {
   const basket = { uniqueBulletsFired: 2 };

@@ -1,9 +1,9 @@
 EVE Fixed Ladder Flight Recorder
-EA version: 2.30
-Railway package: 2.3.0
-EA: EVE_Twelve_Data_Fixed_Ladder_v2.30.mq5
+EA version: 2.40
+Railway package: 2.4.0
+EA: EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5
 Magic number: 2907202622
-Order prefix: EVEL230
+Order prefix: EVEL240
 Data namespace: v220
 Strategy: FIXED_LADDER_FLIGHT_RECORDER
-Build purpose: consistent unique-bullet accounting, exact exit labels, heartbeat repair and campaign event timeline
+Build purpose: Bullet 1 onward halfway BE protection, protected-bullet-only exits and selectable/resettable daily loss control

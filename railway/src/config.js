@@ -18,7 +18,7 @@ function listEnv(name, fallback = []) {
 }
 
 export const config = Object.freeze({
-  version: '2.3.0',
+  version: '2.4.0',
   serviceName: 'EVE Fixed Ladder Flight Recorder',
   mode: 'FIXED_LADDER_FLIGHT_RECORDER_DEMO',
   port: numEnv('PORT', 3000, 1, 65535),

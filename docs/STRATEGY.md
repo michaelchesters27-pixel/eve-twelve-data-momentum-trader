@@ -1,53 +1,48 @@
-# EVE Fixed Ladder Flight Recorder v2.30 strategy
-
-Version 2.30 keeps the v2.20 trading behaviour unchanged while repairing campaign accounting and telemetry.
+# EVE Fixed Ladder Flight Recorder v2.40 strategy
 
 ## Campaign start
 
-When flat and autonomous trading is enabled, MT5 records its current midpoint as the anchor and preloads:
+When flat and autonomous trading is enabled, the EA records the current midpoint as the anchor and places:
 
-- BUY STOPs: anchor +3, +6, +9, +12, +15, +18, +21 and +24
-- SELL STOPs: anchor -3, -6, -9, -12, -15, -18, -21 and -24
+- BUY STOPs at anchor +3, +6, +9, +12, +15, +18, +21 and +24.
+- SELL STOPs at anchor -3, -6, -9, -12, -15, -18, -21 and -24.
 
-Every order is 0.01 lot and begins with a 2.000 broker-side SL.
+Every pending order is 0.01 lot and starts with a 2.000 broker-side SL.
 
-## Fixed ladder
+## Fixed geometry
 
-The ladder is built once and stays where it was placed. It does not slide with price. The opposite ladder is not cancelled. Price can therefore trigger BUY bullets, SELL bullets or both during the same campaign.
+The ladder is built once and stays where it was placed. It does not slide with price. The opposite ladder stays active. A new ladder is built only after a campaign finishes, when a missing ladder is repaired, at EA startup or after a dashboard rebuild request.
 
-The optional `InpRefreshBracketEveryM1Candle` input remains OFF by default. Normal ladder rebuilding only occurs when the EA starts, a completed campaign rearms, the ladder is missing and needs repair, or the dashboard explicitly requests a rebuild.
+## Every bullet earns its own protection
 
-## Halfway protection
+Bullet 1, Bullet 2 and every later bullet are treated identically.
 
-Each bullet is tracked independently. When it reaches +1.500 price movement in its favour, its SL moves to:
+At +1.500 favourable price movement:
 
-- BUY: entry + 0.150
-- SELL: entry - 0.150
+- BUY SL moves to entry +0.150.
+- SELL SL moves to entry -0.150.
 
-This is breakeven plus a small cost buffer.
+The SL only tightens; it never widens.
 
-## Sentinel exit
+## Exit hierarchy
 
-The most recently filled bullet is the newest bullet and therefore the sentinel.
+- Newest bullet hits its original SL before +1.500: close the complete campaign, delete pending orders and rearm.
+- A bullet has already reached +1.500 and its BE-protected SL is hit: close that bullet only.
+- If other positions remain, the campaign continues and the newest remaining live position becomes the sentinel.
+- If no positions remain, clear the old pending ladder, finish the campaign and rearm.
+- Profit target reached: close everything, bank and rearm.
+- Hard basket protection/manual/emergency exit: close everything and rearm or remain stopped as appropriate.
 
-- If it fails before halfway and hits its original SL, close the entire campaign.
-- In this observation build, if it reaches halfway, moves to BE and later hits that protected stop, close the entire campaign.
+## Daily loss control
 
-The EA cancels every remaining pending order, closes every remaining position and immediately builds a new fixed ladder.
+The Railway dashboard controls the daily loss rule:
 
-## Campaign profit target
+- OFF: no daily loss block.
+- ON: stop placing new ladders once realised P/L since the latest reset reaches the selected negative dollar amount.
+- Reset now: start the daily P/L counter again from the moment MT5 receives the updated setting and permit immediate rearming.
 
-From the Railway dashboard:
-
-- OFF allows natural sentinel management.
-- ON banks the selected floating campaign profit and immediately rearms.
-
-The selected amount can be $1, $3, $5, $7, $10, $16, $25 or a custom positive value.
-
-## Counting method
-
-A bullet is counted once by its unique MT5 `POSITION_IDENTIFIER`. Duplicate deal callbacks do not create extra bullets. Historical bullets fired and currently open positions are separate values.
+The current campaign remains protected. The daily loss rule controls new ladder creation rather than abandoning an open position without its normal exit handling.
 
 ## Twelve Data
 
-Twelve Data records live speed, acceleration, tick activity and timeframe context. It never grants or refuses a ladder entry.
+Twelve Data records live speed, acceleration, tick activity and timeframe context for later review. It never grants or refuses an entry.

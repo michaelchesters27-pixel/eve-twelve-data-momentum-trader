@@ -1,0 +1,22 @@
+EVE Fixed Ladder Flight Recorder v2.40
+
+TRADING LOGIC
+1. Bullet 1, Bullet 2 and every later bullet move to BE +0.150 after +1.500 favourable movement.
+2. A protected BE stop closes that individual bullet only.
+3. The remaining campaign and fixed pending ladder continue when other live positions remain.
+4. Only the newest bullet hitting its original SL before halfway closes the complete campaign.
+5. Fixed 8x8 ladder, 3.000 spacing, 0.01 lots and 2.000 initial SL remain unchanged.
+6. Campaign profit target includes a $2 preset and still supports any positive custom amount.
+
+DAILY LOSS CONTROL
+7. Daily loss limit can be turned ON or OFF from the dashboard.
+8. Daily loss amount supports presets and any positive custom dollar value.
+9. Reset daily loss now starts the realised-P/L counter again from the reset moment.
+10. Reset/disable/increased limit permits immediate ladder rearming when no other block exists.
+11. Heartbeat reports daily P/L, allowance remaining, blocked state and reset time.
+12. Dashboard shows the same live daily-loss state.
+
+CONTINUITY
+13. Existing flight-recorder exports, audit and replay remain.
+14. Magic 2907202622 and data namespace v220 are retained for handover and history continuity.
+15. Railway package is 2.4.0 and EA prefix is EVEL240.
