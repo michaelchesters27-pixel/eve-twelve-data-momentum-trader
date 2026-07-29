@@ -1,17 +1,18 @@
 from pathlib import Path
 import re, sys
 root=Path(__file__).resolve().parents[1]
-ea=root/'mt5/EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5'
+ea=root/'mt5/EVE_Twelve_Data_Fixed_Ladder_v2.50.mq5'
 required=[ea,root/'railway/src/server.js',root/'railway/src/config.js',root/'railway/src/twelve-data.js',root/'railway/public/index.html',root/'railway/public/app.js',root/'railway/package.json',root/'README.md',root/'DEPLOY-THIS-FIRST.txt']
 errors=[]
 for f in required:
     if not f.exists(): errors.append(f'Missing required file: {f.relative_to(root)}')
 text=ea.read_text(encoding='utf-8') if ea.exists() else ''
 required_ea=[
- '#property version   "2.40"','2907202622','EVEL240','FIXED_LADDER_FLIGHT_RECORDER',
+ '#property version   "2.50"','2907202622','EVEL250','FIXED_LADDER_FLIGHT_RECORDER',
  'InpLevelsPerSide                  = 8','InpGridSpacingPrice               = 3.000','InpFixedFallbackPrice             = 2.000',
  'InpFixedLot                       = 0.01','InpBreakEvenTriggerPrice          = 1.500','InpBreakEvenBufferPrice           = 0.150',
  'InpProfitTargetEnabledAtStart','runtime_profit_target_enabled','runtime_profit_target_money',
+ 'InpUseFirstBulletQuickCut','InpFirstBulletAdverseCutPrice     = 0.750','ManageFirstBulletQuickCut(','FIRST_BULLET_QUICK_CUT_ARMED','FIRST BULLET QUICK CUT',
  'InpDailyLossEnabledAtStart','runtime_daily_loss_enabled','runtime_daily_loss_money','daily_loss_reset_at_ms','DailyLossRemaining()',
  'ArmFreshTwoSidedBracket','trade.BuyStop(','trade.SellStop(','RegisterBullet(','UpdateBulletMetrics(',
  'ManageIndividualProtection(','BE_ACTIVATED','NEWEST BULLET FAILED BEFORE HALFWAY','BE PROTECTED STOP - BULLET ONLY',
@@ -109,8 +110,8 @@ cfg=(root/'railway/src/config.js').read_text() if (root/'railway/src/config.js')
 ui=(root/'railway/public/index.html').read_text()+(root/'railway/public/app.js').read_text()
 for item in ['FIXED 8×8 LADDER FLIGHT RECORDER','profitTargetEnabled','dailyLossEnabled','/api/daily-loss/reset','/api/settings','/api/replay/','ladders','replay','protections','eve-fixed-ladder-${collection}.csv','auditCampaign','campaignTimeline']:
     if item not in server+ui: errors.append(f'Missing Railway/UI element: {item}')
-for item in ["version: '2.4.0'","mode: 'FIXED_LADDER_FLIGHT_RECORDER_DEMO'","BULLET_DATA_NAMESPACE || 'v220'"]:
-    if item not in cfg: errors.append(f'Missing v2.40 config: {item}')
+for item in ["version: '2.5.0'","mode: 'FIXED_LADDER_FLIGHT_RECORDER_DEMO'","BULLET_DATA_NAMESPACE || 'v220'"]:
+    if item not in cfg: errors.append(f'Missing v2.50 config: {item}')
 if errors:
     print('\n'.join('ERROR: '+e for e in errors)); sys.exit(1)
 print('Project source validation passed.')

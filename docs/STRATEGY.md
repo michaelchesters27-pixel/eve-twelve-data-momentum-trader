@@ -1,4 +1,13 @@
-# EVE Fixed Ladder Flight Recorder v2.40 strategy
+# v2.50 strategy rules
+
+- Bullet 1 quick-cut: 0.750 adverse price movement, then close the campaign and rearm.
+- Bullet 2 onward: existing 2.000 initial fallback.
+- Every bullet: at +1.500 move SL to BE + 0.150.
+- A BE-protected stop closes only that bullet.
+- 8 BUY STOPs and 8 SELL STOPs remain fixed at campaign start with 3.000 spacing and 0.01 lots.
+- Profit target and daily loss controls remain dashboard-selectable.
+
+# EVE Fixed Ladder Flight Recorder v2.50 strategy
 
 ## Campaign start
 

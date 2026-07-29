@@ -1,60 +1,28 @@
-EVE FIXED LADDER FLIGHT RECORDER v2.40
+EVE FIXED LADDER FLIGHT RECORDER v2.50
 
-THIS REPLACES THE CURRENT PROJECT. DO NOT CREATE A NEW GITHUB REPOSITORY OR RAILWAY SERVICE.
+WHAT CHANGED
+- Bullet 1 is cut when price moves 0.750 against it.
+- The bot closes that campaign, deletes all pending orders and immediately builds a fresh ladder.
+- Bullet 2 onward retains the 2.000 initial fallback.
+- Every bullet still moves to BE + costs after +1.500.
+- Protected BE exits still close only that bullet.
+- The dashboard now records and counts first-bullet quick cuts.
 
-WHAT v2.40 CHANGES
-- Bullet 1 now explicitly follows the same halfway protection rule as every later bullet.
-- At +1.500, each bullet moves to BE plus the 0.150 cost buffer.
-- A BE-protected stop closes that bullet only.
-- Only the newest bullet hitting its original SL before halfway closes the complete campaign.
-- Dashboard daily loss limit can be turned ON/OFF, set to any dollar amount and reset immediately.
-- Dashboard shows P/L since reset, remaining allowance and lock status.
-- Profit target now includes a $2 preset.
+DEPLOYMENT
+1. Stop/remove v2.40 from MT5.
+2. Replace the complete GitHub repository contents with this package.
+3. Keep the existing Railway service, domain and variables.
+4. Wait for Railway to show v2.5.0 ONLINE.
+5. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.50.mq5 into MQL5/Experts.
+6. Compile in MetaEditor and require 0 errors.
+7. Attach only v2.50 to XAUUSD M1 on the hedging demo account.
+8. Confirm Railway, Twelve Data and MT5 EA all show ONLINE.
 
 UNCHANGED
-- Fixed 8 BUY STOP + 8 SELL STOP ladder.
-- Exact 3.000 spacing.
-- 0.01 every order.
-- 2.000 initial SL.
-- Both fixed ladders stay active.
-- Profit target control and all flight-recorder exports.
-- Twelve Data is telemetry only.
-
-GITHUB
-1. Delete the existing repository contents.
-2. Upload every file and folder from this ZIP.
-3. Commit the replacement.
-4. The existing Railway service will redeploy automatically.
-
-RAILWAY
-- Keep the existing BOT_TOKEN.
-- Keep the existing TWELVE_DATA_API_KEY and symbol variables.
-- Keep DATA_DIR and current networking settings.
-- No new Railway variables are required.
-- Data namespace remains v220, so existing history remains visible.
-- Confirm the dashboard reports version 2.4.0.
-- Set the campaign profit target required.
-- Set Daily Loss OFF for unrestricted demo collection, or ON with the required amount.
-- Use Reset daily loss now whenever the current lock must be cleared.
-
-MT5
-1. Remove v2.30 before attaching v2.40.
-2. Copy `mt5/EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5` into MQL5/Experts.
-3. Compile in MetaEditor and require 0 errors.
-4. Attach it to one XAUUSD M1 chart on an IC Markets hedging DEMO account.
-5. Use the same Railway URL and BOT_TOKEN.
-6. Enable Algo Trading and keep the Railway domain in the allowed WebRequest list.
-7. Confirm MT5 EA shows ONLINE and heartbeat age keeps updating.
-
-SAFE HANDOVER
-- v2.40 retains Magic 2907202622 and data namespace v220.
-- This lets it recognise v2.30 positions and orders during handover.
-- Never leave both EA versions attached.
-
-EXPECTED BULLET BEHAVIOUR
-- Bullet 1 opens with the 2.000 SL.
-- At +1.500 it moves to BE +0.150.
-- If that protected stop is hit, Bullet 1 closes at protected BE.
-- If it was the only live bullet, the campaign finishes flat/near-flat and rearms.
-- If other bullets remain, they continue.
-- A newest unprotected bullet hitting its original SL closes the complete campaign.
+- Magic 2907202622.
+- Data namespace v220.
+- 8 BUY STOPs + 8 SELL STOPs.
+- 3.000 fixed spacing.
+- 0.01 lots.
+- Profit target ON/OFF and custom amount.
+- Daily loss ON/OFF, custom amount and reset button.

@@ -1,26 +1,13 @@
-COMPILE THIS FILE
+COMPILE THIS FILE IN METAEDITOR
 
-EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5
+EVE_Twelve_Data_Fixed_Ladder_v2.50.mq5
 
-Expected result: 0 errors.
+Required result: 0 errors.
 
-Default ladder:
-- 8 BUY STOPs
-- 8 SELL STOPs
-- 3.000 spacing
-- 0.01 every order
-- 2.000 initial SL every order
-- +1.500 halfway trigger for Bullet 1 onward
-- BE + 0.150 cost buffer
-- protected BE stop closes that bullet only
-- newest unprotected initial SL closes the complete campaign
+Attach only v2.50 to XAUUSD M1 on the IC Markets hedging demo account. Do not run v2.40 and v2.50 together.
 
-Dashboard:
-- campaign profit target OFF/custom/presets including $2
-- daily loss ON/OFF/custom/reset now
-
-Important:
-- Remove v2.30 before attaching v2.40.
-- Do not run both versions together.
-- Magic 2907202622 is retained for safe handover.
-- Attach to one XAUUSD M1 chart on a hedging DEMO account only.
+Default v2.50 change:
+- Bullet 1 quick cut: 0.750 adverse price.
+- Bullet 2 onward initial fallback: 2.000.
+- Every bullet BE trigger: +1.500.
+- BE buffer: +0.150.

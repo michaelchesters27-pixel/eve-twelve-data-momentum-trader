@@ -1,4 +1,4 @@
-EVE FIXED LADDER FLIGHT RECORDER v2.40 VALIDATION
+EVE FIXED LADDER FLIGHT RECORDER v2.50 VALIDATION
 Date: 2026-07-29
 
 PASSED
@@ -9,21 +9,24 @@ PASSED
 - Forbidden conservative entry-filter checks.
 - JavaScript syntax checks for Railway server, feature engine, Twelve Data client and dashboard.
 - 13 Railway automated tests.
-- Profit-target partial settings test.
-- Daily-loss ON/OFF/custom/reset settings test.
+- Profit-target settings tests.
+- Daily-loss ON/OFF/custom/reset settings tests.
 - Campaign accounting and audit tests.
-- Railway settings/reset/control/heartbeat smoke test.
+- Local Railway health, settings, heartbeat, reset and state smoke tests.
 
 LOCKED SOURCE BEHAVIOUR VERIFIED
 - 8 BUY STOP + 8 SELL STOP fixed ladder.
 - 3.000 spacing and 0.01 equal lots.
-- 2.000 initial SL.
-- Bullet 1 onward moves to BE +0.150 at +1.500.
+- Bullet 1 fixed quick cut at 0.750 adverse price.
+- Tick-level fallback closes the campaign if the broker-side quick-cut modification is delayed or rejected.
+- Bullet 2 onward retains the 2.000 initial fallback.
+- Every bullet moves to BE +0.150 at +1.500.
 - BE-protected SL closes that bullet only.
 - Newest unprotected original SL closes the complete campaign.
-- Profit target supports OFF, $2 preset and custom amounts.
+- Profit target supports OFF, presets and custom amounts.
 - Daily loss supports ON/OFF, custom amount and reset-now.
+- First-bullet quick-cut events and exits are recorded.
 - Existing v220 history namespace and Magic 2907202622 retained.
 
 NOT AVAILABLE IN THIS ENVIRONMENT
-- MetaEditor/MT5 compilation. Compile EVE_Twelve_Data_Fixed_Ladder_v2.40.mq5 locally and require 0 errors before attaching.
+- MetaEditor/MT5 compilation. Compile EVE_Twelve_Data_Fixed_Ladder_v2.50.mq5 locally and require 0 errors before attaching.

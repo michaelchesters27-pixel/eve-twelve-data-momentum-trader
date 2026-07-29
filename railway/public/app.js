@@ -73,8 +73,9 @@ function render(state) {
     row('Live BUY positions', mt5.campaignBuyLegs || 0) + row('Live SELL positions', mt5.campaignSellLegs || 0) +
     row('Positions', mt5.positionCount || 0) + row('Pending orders', mt5.pendingCount || 0) + row('Anchor', Number(mt5.ladderAnchor || 0).toFixed(3)) +
     row('Grid spacing', Number(mt5.gridSpacing || 3).toFixed(3)) + row('Initial fallback', Number(mt5.fallbackDistance || 2).toFixed(3)) +
+    row('First bullet quick cut', 'At -0.750 → close campaign and rearm') +
     row('Halfway BE trigger', Number(mt5.beTriggerPrice || 1.5).toFixed(3)) + row('BE + costs buffer', Number(mt5.beBufferPrice || 0.15).toFixed(3)) +
-    row('Bullet 1 protection', 'At +1.500 → BE + costs') + row('Protected BE exit', 'Close that bullet only') +
+    row('Every bullet protection', 'At +1.500 → BE + costs') + row('Protected BE exit', 'Close that bullet only') +
     row('Newest bullet', mt5.newestTicket || '—') + row('Floating P/L', money(mt5.floatingProfit || 0)) + row('Peak P/L', money(mt5.peakBasketProfit || 0)) +
     row('Daily loss P/L', money(dailyPnl)) + row('Daily loss status', settings.dailyLossEnabled ? (mt5.dailyLossBlocked ? 'LOCKED' : 'ACTIVE') : 'OFF');
 
@@ -92,6 +93,8 @@ function render(state) {
   $('lab-target-rate').textContent = `${lab.targetBankRate || 0}% of campaigns`;
   $('lab-fails').textContent = lab.newestFailures || 0;
   $('lab-fail-rate').textContent = `${lab.newestFailureRate || 0}% of campaigns`;
+  $('lab-quick-cuts').textContent = lab.firstBulletQuickCuts || 0;
+  $('lab-quick-cut-rate').textContent = `${lab.firstBulletQuickCutRate || 0}% of campaigns`;
 
   const baskets = state.recentBaskets || [];
   $('basket-rows').innerHTML = baskets.map(item => `<tr>

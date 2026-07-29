@@ -1,0 +1,34 @@
+EVE FIXED LADDER DATA REVIEW — 29 JULY 2026
+
+FILES REVIEWED
+- Campaigns
+- Bullets
+- Protection events
+- Ladders
+- Replay
+- Orders
+- Banking
+
+OBSERVED SAMPLE
+- 47 completed campaigns
+- 25 wins, 21 losses, 1 zero
+- Net P/L: -$15.89
+- Profit factor: 0.65
+- 46 campaigns fired only one bullet
+- 1 campaign fired two bullets
+
+TARGET COMPARISON
+- $1 target: 33 campaigns, net -$13.68, average winner +$1.03, average loser -$2.08
+- $2 target: 14 campaigns, net -$2.21, average winner +$1.56, average loser -$2.45, profit factor about 0.85
+
+MAIN FAILURE
+The loss size was too large relative to the normal winner. The first bullet was commonly allowed to lose roughly $2 before the ladder had proved momentum.
+
+0.750 QUICK-CUT REVIEW
+A static counterfactual using recorded campaign MAE and an estimated $0.10 execution-cost allowance reduced the historical sample from about -$15.89 to about -$2.62. It would also have cut seven campaigns that later became winners, so this is not proof of profitability. Immediate rearming changes the future trade sequence and must be tested live.
+
+V2.50 TEST RULE
+- Bullet 1: cut at 0.750 adverse price, close campaign, delete pending orders and rearm.
+- Bullet 2 onward: retain 2.000 initial fallback.
+- Every bullet: move to BE +0.150 at +1.500.
+- Profit target: $2 is the stronger observed setting so far, but it remains user-selectable.

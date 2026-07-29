@@ -1,9 +1,9 @@
 {
   "name": "eve-twelve-data-momentum-trader",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "private": true,
   "type": "module",
-  "description": "Fixed XAUUSD 8x8 pending-order ladder where Bullet 1 onward earns halfway BE protection, protected stops close one bullet, newest initial-SL failure closes the campaign, and profit/daily-loss controls are selectable from the dashboard.",
+  "description": "Fixed XAUUSD 8x8 pending-order ladder with a 0.750 adverse quick-cut for Bullet 1, halfway BE protection for every bullet, protected-bullet-only exits, and selectable profit/daily-loss controls.",
   "engines": {
     "node": ">=22"
   },

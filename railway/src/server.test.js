@@ -36,13 +36,15 @@ test('campaign performance uses closed campaign P/L', () => {
 test('campaign laboratory counts targets, newest-bullet exits and BE activations', () => {
   const baskets = [
     { positionsOpened: 4, side: 'BUY', exitReason: 'CAMPAIGN PROFIT TARGET 7.00 REACHED' },
-    { positionsOpened: 2, side: 'MIXED', exitReason: 'NEWEST BULLET FAILED BEFORE HALFWAY - CLOSE FULL CAMPAIGN' }
+    { positionsOpened: 2, side: 'MIXED', exitReason: 'NEWEST BULLET FAILED BEFORE HALFWAY - CLOSE FULL CAMPAIGN' },
+    { positionsOpened: 1, side: 'BUY', exitReason: 'FIRST BULLET QUICK CUT 0.750 ADVERSE - CLOSE FULL CAMPAIGN' }
   ];
   const protections = [{ action: 'BE_ACTIVATED' }, { action: 'BE_ACTIVATED' }];
   const output = calculateLab(baskets, [], protections);
-  assert.equal(output.averageBullets, 3);
+  assert.equal(output.averageBullets, 2.33);
   assert.equal(output.targetBanks, 1);
   assert.equal(output.newestFailures, 1);
+  assert.equal(output.firstBulletQuickCuts, 1);
   assert.equal(output.mixedCampaigns, 1);
   assert.equal(output.breakEvenActivations, 2);
 });

@@ -1,6 +1,6 @@
 # Flight recorder, audit and CSV exports
 
-The data namespace remains `v220` so the existing history is preserved across the v2.40 deployment.
+The data namespace remains `v220` so the existing history is preserved across the v2.50 deployment.
 
 ## Campaign-wide sequence
 
@@ -79,3 +79,7 @@ Selecting a campaign shows:
 2. The price and basket P/L snapshots for the same campaign.
 
 This lets one campaign be reviewed without guessing from disconnected CSV rows.
+
+## v2.50 first-bullet quick-cut tracking
+
+The protection export now also records `FIRST_BULLET_QUICK_CUT_ARMED`. Campaign and bullet close reasons distinguish `FIRST BULLET QUICK CUT STOP` from `FIRST BULLET QUICK CUT MARKET EXIT`. Campaign history records `FIRST BULLET QUICK CUT 0.750 ADVERSE - CLOSE FULL CAMPAIGN` when the rule ends a campaign.

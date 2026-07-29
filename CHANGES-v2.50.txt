@@ -1,0 +1,12 @@
+EVE Fixed Ladder Flight Recorder v2.50
+
+1. Bullet 1 now has a fixed 0.750 adverse-price quick cut.
+2. The EA attempts to tighten Bullet 1 to a broker-side 0.750 SL immediately after it opens.
+3. A tick-level fallback closes the campaign if the broker-side modification is delayed or rejected.
+4. A Bullet 1 quick cut deletes every pending order and immediately rearms a fresh fixed ladder.
+5. Bullet 2 onward keeps the existing 2.000 initial fallback.
+6. Every bullet still earns BE + 0.150 at +1.500.
+7. A protected BE stop still closes only that bullet.
+8. First-bullet quick-cut arming and exits are recorded in protections, signals, orders, replay and campaign history.
+9. Dashboard Campaign Laboratory now counts first-bullet quick-cut campaigns.
+10. Profit target and daily-loss controls remain unchanged.

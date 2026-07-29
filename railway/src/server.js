@@ -156,6 +156,7 @@ export function calculateLab(baskets, legs, protections) {
   const campaigns = baskets.length;
   const targetBanks = baskets.filter(row => String(row.exitReason || '').includes('PROFIT TARGET')).length;
   const newestFailures = baskets.filter(row => String(row.exitReason || '').includes('NEWEST BULLET')).length;
+  const firstBulletQuickCuts = baskets.filter(row => String(row.exitReason || '').includes('FIRST BULLET QUICK CUT')).length;
   const mixed = baskets.filter(row => String(row.side || '').toUpperCase() === 'MIXED').length;
   const beCount = protections.filter(row => String(row.action || '').toUpperCase() === 'BE_ACTIVATED').length;
   const mfe = closedLegs.map(row => finite(row.mfePrice)).filter(value => value >= 0);
@@ -167,6 +168,8 @@ export function calculateLab(baskets, legs, protections) {
     targetBankRate: campaigns ? round(targetBanks / campaigns * 100, 1) : 0,
     newestFailures,
     newestFailureRate: campaigns ? round(newestFailures / campaigns * 100, 1) : 0,
+    firstBulletQuickCuts,
+    firstBulletQuickCutRate: campaigns ? round(firstBulletQuickCuts / campaigns * 100, 1) : 0,
     mixedCampaigns: mixed,
     mixedCampaignRate: campaigns ? round(mixed / campaigns * 100, 1) : 0,
     breakEvenActivations: beCount,

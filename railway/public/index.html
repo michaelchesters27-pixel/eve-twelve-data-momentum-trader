@@ -12,13 +12,13 @@
       <div>
         <p class="eyebrow">XAUUSD FIXED LADDER DEMO ENGINE</p>
         <h1>EVE Fixed Ladder Flight Recorder</h1>
-        <p>8 BUY STOPs + 8 SELL STOPs · fixed 3.000 spacing · 0.01 every bullet · every bullet earns BE at halfway · newest initial-SL sentinel</p>
+        <p>8 BUY STOPs + 8 SELL STOPs · fixed 3.000 spacing · 0.01 every bullet · Bullet 1 quick-cut at 0.750 · every bullet earns BE at halfway</p>
       </div>
       <div class="auth"><input id="token" type="password" placeholder="BOT_TOKEN" autocomplete="current-password" /><button id="connect">Connect</button></div>
     </header>
 
     <section class="hero grid four">
-      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.4.0</small></article>
+      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.5.0</small></article>
       <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">Telemetry stream</small></article>
       <article class="card"><span>MT5 EA</span><strong id="mt5">OFFLINE</strong><small id="mt5-detail">Waiting for heartbeat</small></article>
       <article class="card"><span>Autonomous</span><strong id="auto">OFF</strong><small id="mode">DEMO</small></article>
@@ -78,11 +78,12 @@
       <article class="panel"><h3>Twelve Data telemetry</h3><div id="telemetry" class="rows"></div></article>
     </section>
 
-    <section class="grid four metrics lab">
+    <section class="grid five metrics lab">
       <article class="card"><span>Average bullets</span><strong id="lab-bullets">0.00</strong><small>per campaign</small></article>
       <article class="card"><span>BE activations</span><strong id="lab-be">0</strong><small>halfway protection events</small></article>
       <article class="card"><span>Target banks</span><strong id="lab-target">0</strong><small id="lab-target-rate">0% of campaigns</small></article>
       <article class="card"><span>Newest-bullet exits</span><strong id="lab-fails">0</strong><small id="lab-fail-rate">0% of campaigns</small></article>
+      <article class="card"><span>First-bullet quick cuts</span><strong id="lab-quick-cuts">0</strong><small id="lab-quick-cut-rate">0% of campaigns</small></article>
     </section>
 
     <section class="controls panel">
