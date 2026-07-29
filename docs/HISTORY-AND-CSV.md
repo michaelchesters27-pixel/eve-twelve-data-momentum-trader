@@ -1,27 +1,81 @@
-# Flight recorder and CSV exports
+# Flight recorder, audit and CSV exports
 
-The clean namespace is `v220`.
+The data namespace remains `v220` so the existing history is preserved across the v2.30 deployment.
+
+## Campaign-wide sequence
+
+Every important event carries:
+
+- `campaignId`
+- `eventSequence`
+- event time
+- action
+- side
+- bullet number or ticket where relevant
+- reason
+
+This sequence allows the dashboard to reconstruct the exact order of ladder placement, pending-order actions, bullet entries, BE protection, exits, banking and campaign completion.
 
 ## Campaigns CSV
 
-Campaign ID, anchor, start/end, duration, BUY and SELL bullet counts, target mode, net result, peak, MAE, giveback and exit reason.
+Campaign ID, anchor, start/end, duration, unique BUY and SELL bullet counts, maximum simultaneous positions, target mode, net result, peak, MAE, giveback, exit reason and counting method.
 
 ## Bullets CSV
 
-Every bullet open and close with side, bullet number, entry/exit price, initial SL, final SL, BE activation, time to BE, MFE, MAE, P/L and close reason.
+Every unique bullet OPEN and CLOSE record with side, bullet number, position identifier, ticket, entry/exit price, initial SL, final SL, BE activation, time to BE, MFE, MAE, P/L, precise close reason and campaign exit context.
+
+The expected SL labels are:
+
+- `INITIAL STOP LOSS`
+- `BE PROTECTED STOP`
 
 ## BE Events CSV
 
-Every halfway protection event with campaign, bullet, entry, new SL, progress, trigger and buffer.
+Every halfway protection event with campaign, sequence, bullet, entry, new SL, progress, trigger and buffer.
 
 ## Ladders CSV
 
-Every campaign anchor plus all 8 BUY STOP and 8 SELL STOP prices, spacing, lot, fallback and BE geometry.
+Every campaign anchor plus all 8 BUY STOP and 8 SELL STOP prices, spacing, lot, fallback, BE geometry and true build reason.
+
+Normal build reasons include:
+
+- `EA START - IMMEDIATE REARM`
+- `CAMPAIGN COMPLETE - <reason>`
+- `LADDER MISSING - REPAIR`
+- `DASHBOARD REBUILD REQUEST`
+
+`OPTIONAL M1 REFRESH` appears only when that input is deliberately enabled.
 
 ## Replay CSV
 
-A timed sequence containing broker bid/ask, spread, basket floating/peak P/L, open positions, pending orders and newest bullet. The dashboard can load one campaign and replay its recorded timeline.
+Timed broker snapshots containing bid, ask, spread, floating and peak P/L, live positions, pending orders, unique bullets fired, BUY/SELL bullet totals, newest bullet and the last event.
 
-## Other exports
+## Orders CSV
 
-Orders, Banking, Market Telemetry, Signals, Events and MT5 heartbeat histories remain available.
+Every pending-order placement, rejection and cancellation with campaign ID, event sequence, role, side, ticket, volume, price and reason.
+
+## Banking CSV
+
+Every campaign close decision, including profit target, sentinel failure, hard protection or manual close.
+
+## Market Telemetry CSV
+
+Twelve Data and MT5 context used only for later analysis. It does not block ladder entries.
+
+## Campaign audit
+
+The server checks each completed campaign against its leg records:
+
+- `CONSISTENT`: reported bullet total matches unique OPEN position identifiers and all expected CLOSE records are present.
+- `SYNCING CLOSE RECORDS`: the total is correct but some close events are still arriving.
+- `COUNT MISMATCH`: the campaign total differs from the unique OPEN bullet records.
+- `NO BULLET RECORDS`: no usable bullet records exist for that campaign.
+
+## Replay page
+
+Selecting a campaign shows:
+
+1. The exact event timeline ordered by `eventSequence` and time.
+2. The price and basket P/L snapshots for the same campaign.
+
+This lets one campaign be reviewed without guessing from disconnected CSV rows.

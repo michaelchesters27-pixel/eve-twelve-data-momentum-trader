@@ -1,6 +1,15 @@
-EVE FIXED LADDER FLIGHT RECORDER v2.20
+EVE FIXED LADDER FLIGHT RECORDER v2.30
 
 THIS REPLACES THE CURRENT PROJECT. DO NOT CREATE A NEW GITHUB REPOSITORY OR RAILWAY SERVICE.
+
+WHAT v2.30 CHANGES
+- Trading strategy stays the same as v2.20.
+- Unique bullets are counted by MT5 POSITION_IDENTIFIER.
+- Duplicate deal callbacks are ignored.
+- Initial SL and BE-protected exits have separate labels.
+- Every campaign has a sequenced event timeline and an accounting audit.
+- Heartbeat has priority over telemetry and reports clearer HTTP diagnostics.
+- Ladder rebuild history now records the true rebuild reason.
 
 GITHUB
 1. Delete the existing repository contents.
@@ -13,19 +22,28 @@ RAILWAY
 - Keep the existing TWELVE_DATA_API_KEY.
 - Keep the existing Twelve Data symbol variables.
 - Keep DATA_DIR and current networking settings.
+- Do not create a new Railway service.
 - No new Railway variables are required.
-- Clean history namespace: v220.
-- After deployment, open the existing Railway domain and choose Profit Target OFF or a dollar target.
+- Data namespace remains v220 so existing history stays visible.
+- After deployment, open the existing Railway domain and confirm version 2.3.0.
+- Choose Profit Target OFF or enter the required dollar target.
 
 MT5
-1. Remove the old EA from the chart.
-2. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.20.mq5 into MQL5/Experts.
-3. Open it in MetaEditor and compile it.
-4. Require 0 compile errors before attaching it.
-5. Attach it to one XAUUSD M1 chart on an IC Markets hedging DEMO account.
-6. Enter the same Railway URL and BOT_TOKEN.
-7. Tick Allow Algo Trading and allow WebRequest for the Railway domain.
-8. Do not run an older EVE EA on the same XAUUSD account at the same time.
+1. Turn off or remove the old EA before attaching v2.30.
+2. Do not run v2.20 and v2.30 at the same time. They intentionally share the same magic number for safe handover.
+3. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.30.mq5 into MQL5/Experts.
+4. Open it in MetaEditor and compile it.
+5. Require 0 compile errors before attaching it.
+6. Attach it to one XAUUSD M1 chart on an IC Markets hedging DEMO account.
+7. Enter the same Railway URL and BOT_TOKEN.
+8. Tick Allow Algo Trading.
+9. Add the Railway base domain under Tools > Options > Expert Advisors > Allow WebRequest for listed URL.
+10. Confirm the dashboard changes from MT5 EA OFFLINE to ONLINE and that heartbeat age continues updating.
+
+SAFE HANDOVER
+- v2.30 retains Magic 2907202622 and data namespace v220.
+- This lets it recognise and manage existing v2.20 positions and pending orders after a restart.
+- Do not manually duplicate the ladder by leaving the old EA attached.
 
 EXPECTED IDLE STATE
 - 8 BUY STOPs above price.
@@ -37,5 +55,11 @@ EXPECTED IDLE STATE
 
 EXPECTED BULLET PROTECTION
 - At +1.500 price movement, that bullet moves to BE plus 0.150.
-- If the newest bullet hits an SL, the complete campaign closes.
-- The bot rearms immediately.
+- If the newest bullet hits either its initial SL or its BE-protected SL, this observation build closes the complete campaign.
+- The bot then rearms immediately.
+
+EXPECTED HISTORY
+- Campaign bullet totals should match unique OPEN bullet records.
+- Exit labels should show INITIAL STOP LOSS or BE PROTECTED STOP.
+- Campaign history should show CONSISTENT after all close records arrive.
+- Replay should show both the ordered event timeline and the price snapshots.

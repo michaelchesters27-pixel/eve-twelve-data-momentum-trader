@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { calculateLab, calculatePerformance, normaliseSettings } from './server.js';
+import { auditCampaign, calculateLab, calculatePerformance, normaliseSettings } from './server.js';
 
 test('profit target settings support OFF and any positive custom dollar amount', () => {
   const current = { version: 4, profitTargetEnabled: false, profitTargetMoney: 7 };
@@ -30,4 +30,28 @@ test('campaign laboratory counts targets, newest-bullet exits and BE activations
   assert.equal(output.newestFailures, 1);
   assert.equal(output.mixedCampaigns, 1);
   assert.equal(output.breakEvenActivations, 2);
+});
+
+
+test('campaign audit catches the exact mismatch seen in v2.20', () => {
+  const basket = { uniqueBulletsFired: 2 };
+  const legs = [
+    { action: 'OPEN', positionId: 'A' },
+    { action: 'CLOSE', positionId: 'A' }
+  ];
+  const output = auditCampaign(basket, legs);
+  assert.equal(output.reportedBullets, 2);
+  assert.equal(output.uniqueOpenBullets, 1);
+  assert.equal(output.status, 'COUNT MISMATCH');
+});
+
+test('campaign audit is consistent when unique OPEN and CLOSE records agree', () => {
+  const basket = { uniqueBulletsFired: 2 };
+  const legs = [
+    { action: 'OPEN', positionId: 'A' }, { action: 'OPEN', positionId: 'B' },
+    { action: 'CLOSE', positionId: 'A' }, { action: 'CLOSE', positionId: 'B' }
+  ];
+  const output = auditCampaign(basket, legs);
+  assert.equal(output.status, 'CONSISTENT');
+  assert.equal(output.closedUniqueBullets, 2);
 });

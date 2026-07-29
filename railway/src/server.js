@@ -23,7 +23,7 @@ let mt5 = {
   account: null, symbol: null, bid: 0, ask: 0, spreadPoints: 0,
   terminalConnected: false, algoAllowed: false, autonomous: false,
   positionCount: 0, pendingCount: 0, campaignId: '', campaignCurrentSide: 'NONE',
-  campaignBuyLegs: 0, campaignSellLegs: 0, floatingProfit: 0, peakBasketProfit: 0,
+  campaignBuyLegs: 0, campaignSellLegs: 0, campaignBuyBulletsFired: 0, campaignSellBulletsFired: 0, uniqueBulletsFired: 0, heartbeatSequence: 0, floatingProfit: 0, peakBasketProfit: 0,
   engineState: 'WAITING FOR MT5', lastSeenAt: null, lastEvent: 'Waiting for MT5 EA', lastHttpStatus: 'Not connected'
 };
 let control = { autonomous: config.autonomousAtStart, emergency: false };
@@ -145,7 +145,7 @@ export function calculateLab(baskets, legs, protections) {
   const mae = closedLegs.map(row => finite(row.maePrice)).filter(value => value >= 0);
   return {
     campaigns,
-    averageBullets: campaigns ? round(baskets.reduce((sum, row) => sum + integer(row.positionsOpened), 0) / campaigns, 2) : 0,
+    averageBullets: campaigns ? round(baskets.reduce((sum, row) => sum + integer(row.uniqueBulletsFired ?? row.positionsOpened), 0) / campaigns, 2) : 0,
     targetBanks,
     targetBankRate: campaigns ? round(targetBanks / campaigns * 100, 1) : 0,
     newestFailures,
@@ -156,6 +156,72 @@ export function calculateLab(baskets, legs, protections) {
     averageMfePrice: mfe.length ? round(mfe.reduce((a, b) => a + b, 0) / mfe.length, 3) : 0,
     averageMaePrice: mae.length ? round(mae.reduce((a, b) => a + b, 0) / mae.length, 3) : 0
   };
+}
+
+
+export function auditCampaign(basket, legs = []) {
+  const openRows = legs.filter(row => String(row.action || '').toUpperCase() === 'OPEN');
+  const closeRows = legs.filter(row => String(row.action || '').toUpperCase() === 'CLOSE');
+  const key = row => String(row.positionId || row.ticket || row.id || '');
+  const uniqueOpenKeys = new Set(openRows.map(key).filter(Boolean));
+  const uniqueCloseKeys = new Set(closeRows.map(key).filter(Boolean));
+  const reportedBullets = integer(basket?.uniqueBulletsFired ?? basket?.positionsOpened);
+  const uniqueOpenBullets = uniqueOpenKeys.size;
+  const closedUniqueBullets = [...uniqueOpenKeys].filter(value => uniqueCloseKeys.has(value)).length;
+  let status = 'NO BULLET RECORDS';
+  if (uniqueOpenBullets > 0 && reportedBullets === uniqueOpenBullets) {
+    status = basket && closedUniqueBullets < uniqueOpenBullets ? 'SYNCING CLOSE RECORDS' : 'CONSISTENT';
+  } else if (uniqueOpenBullets > 0 || reportedBullets > 0) {
+    status = 'COUNT MISMATCH';
+  }
+  return { status, reportedBullets, uniqueOpenBullets, openRecords: openRows.length, closeRecords: closeRows.length, closedUniqueBullets };
+}
+
+function eventTime(row = {}) {
+  const value = row.at ?? row.dealTime ?? row.exitTime ?? row.entryTime ?? row.receivedAt;
+  const numeric = Number(value);
+  if (Number.isFinite(numeric) && numeric > 0) return numeric;
+  const parsed = Date.parse(value || '');
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function timelineItem(type, row) {
+  return {
+    type,
+    eventSequence: integer(row.eventSequence, 0),
+    at: row.at ?? row.dealTime ?? row.exitTime ?? row.entryTime ?? row.receivedAt,
+    action: row.action || (type === 'CAMPAIGN' ? 'CLOSED' : type),
+    side: row.side || '', bulletNumber: integer(row.bulletNumber, 0), ticket: row.ticket || '',
+    price: finite(row.price ?? row.entryPrice ?? row.anchorPrice), netProfit: finite(row.netProfit ?? row.basketProfit),
+    reason: row.reason || row.exitReason || row.campaignExitReason || ''
+  };
+}
+function campaignTimeline(records) {
+  const rows = [
+    ...(records.ladder ? [timelineItem('LADDER', records.ladder)] : []),
+    ...records.orders.map(row => timelineItem('ORDER', row)),
+    ...records.legs.map(row => timelineItem('BULLET', row)),
+    ...records.protections.map(row => timelineItem('PROTECTION', row)),
+    ...records.banks.map(row => timelineItem('BANKING', row)),
+    ...(records.basket ? [timelineItem('CAMPAIGN', records.basket)] : [])
+  ];
+  return rows.sort((a, b) => {
+    if (a.eventSequence && b.eventSequence && a.eventSequence !== b.eventSequence) return a.eventSequence - b.eventSequence;
+    return eventTime(a) - eventTime(b);
+  });
+}
+
+function enrichedRecentBaskets(limit = 100) {
+  const rows = store.list('baskets', limit);
+  const ids = new Set(rows.map(row => String(row.campaignId || row.id || '')));
+  const legsByCampaign = new Map([...ids].map(id => [id, []]));
+  for (const leg of store.all('legs')) {
+    const id = String(leg.campaignId || '');
+    if (legsByCampaign.has(id)) legsByCampaign.get(id).push(leg);
+  }
+  return rows.map(row => {
+    const id = String(row.campaignId || row.id || '');
+    return { ...row, audit: auditCampaign(row, legsByCampaign.get(id) || []) };
+  });
 }
 
 function overview() {
@@ -180,7 +246,7 @@ function overview() {
     lab: calculateLab(store.all('baskets'), store.all('legs'), store.all('protections')),
     counts: Object.fromEntries(['scans','signals','baskets','legs','orders','banks','ladders','replay','protections','events'].map(name => [name, store.all(name).length])),
     recentScans: store.list('scans', 100), recentSignals: store.list('signals', 100),
-    recentBaskets: store.list('baskets', 100), recentLegs: store.list('legs', 300),
+    recentBaskets: enrichedRecentBaskets(100), recentLegs: store.list('legs', 300),
     recentOrders: store.list('orders', 300), recentBanks: store.list('banks', 100),
     recentLadders: store.list('ladders', 50), recentProtections: store.list('protections', 200), recentEvents: store.list('events', 100)
   };
@@ -244,9 +310,9 @@ function controlText() {
 }
 function campaignRecords(campaignId) {
   const id = String(campaignId || '');
-  const match = row => String(row.campaignId || row.id || '') === id;
-  const byTime = (a, b) => finite(a.at ?? a.dealTime ?? a.receivedAt) - finite(b.at ?? b.dealTime ?? b.receivedAt);
-  return {
+  const match = row => String(row.campaignId || '') === id || String(row.id || '') === id;
+  const byTime = (a, b) => eventTime(a) - eventTime(b);
+  const records = {
     campaignId: id,
     basket: store.all('baskets').find(match) || null,
     ladder: store.all('ladders').find(match) || null,
@@ -256,6 +322,7 @@ function campaignRecords(campaignId) {
     replay: store.all('replay').filter(match).sort(byTime),
     banks: store.all('banks').filter(match).sort(byTime)
   };
+  return { ...records, audit: auditCampaign(records.basket, records.legs), timeline: campaignTimeline(records) };
 }
 
 export function createHttpServer() {
@@ -284,6 +351,10 @@ export function createHttpServer() {
           floatingProfit: finite(body.floatingProfit, mt5.floatingProfit), peakBasketProfit: finite(body.peakBasketProfit, mt5.peakBasketProfit),
           positionCount: integer(body.positionCount, mt5.positionCount), pendingCount: integer(body.pendingCount, mt5.pendingCount),
           campaignBuyLegs: integer(body.campaignBuyLegs, mt5.campaignBuyLegs), campaignSellLegs: integer(body.campaignSellLegs, mt5.campaignSellLegs),
+          campaignBuyBulletsFired: integer(body.campaignBuyBulletsFired, mt5.campaignBuyBulletsFired),
+          campaignSellBulletsFired: integer(body.campaignSellBulletsFired, mt5.campaignSellBulletsFired),
+          uniqueBulletsFired: integer(body.uniqueBulletsFired ?? body.positionsOpened, mt5.uniqueBulletsFired),
+          heartbeatSequence: integer(body.heartbeatSequence, mt5.heartbeatSequence),
           terminalConnected: String(body.terminalConnected) === 'true' || body.terminalConnected === true,
           algoAllowed: String(body.algoAllowed) === 'true' || body.algoAllowed === true,
           autonomous: String(body.autonomous) === 'true' || body.autonomous === true,

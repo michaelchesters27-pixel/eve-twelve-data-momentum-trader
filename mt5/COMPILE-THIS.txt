@@ -1,6 +1,6 @@
 COMPILE THIS FILE
 
-EVE_Twelve_Data_Fixed_Ladder_v2.20.mq5
+EVE_Twelve_Data_Fixed_Ladder_v2.30.mq5
 
 Expected result: 0 errors.
 
@@ -14,4 +14,8 @@ Default ladder:
 - BE + 0.150 cost buffer
 - newest-bullet SL closes the complete campaign
 
-Remove the old EA before attaching v2.20. Do not run both together.
+Important:
+- Remove the old EA before attaching v2.30.
+- Do not run v2.20 and v2.30 together.
+- Magic 2907202622 is retained so v2.30 can recover an existing campaign.
+- Attach to one XAUUSD M1 chart on a hedging DEMO account only.

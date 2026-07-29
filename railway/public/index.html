@@ -18,7 +18,7 @@
     </header>
 
     <section class="hero grid four">
-      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.2.0</small></article>
+      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.3.0</small></article>
       <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">Telemetry stream</small></article>
       <article class="card"><span>MT5 EA</span><strong id="mt5">OFFLINE</strong><small id="mt5-detail">Waiting for heartbeat</small></article>
       <article class="card"><span>Autonomous</span><strong id="auto">OFF</strong><small id="mode">DEMO</small></article>
@@ -80,13 +80,16 @@
       <a data-export="ladders">Ladders CSV</a><a data-export="replay">Replay CSV</a><a data-export="orders">Orders CSV</a>
       <a data-export="banks">Banking CSV</a><a data-export="scans">Market telemetry CSV</a>
     </div></div>
-      <div class="table-wrap"><table><thead><tr><th>Exit</th><th>Campaign</th><th>Side</th><th>Bullets</th><th>P/L</th><th>Peak</th><th>Giveback</th><th>Target</th><th>Reason</th></tr></thead><tbody id="basket-rows"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Exit</th><th>Campaign</th><th>Side</th><th>Bullets</th><th>Audit</th><th>P/L</th><th>Peak</th><th>Giveback</th><th>Target</th><th>Reason</th></tr></thead><tbody id="basket-rows"></tbody></table></div>
     </section>
 
     <section class="panel">
       <div class="section-head"><h3>Campaign replay</h3><div class="replay-controls"><select id="campaign-select"><option value="">Choose a campaign</option></select><button id="load-replay" type="button">Load replay</button></div></div>
-      <div id="replay-summary" class="replay-summary muted">Choose a campaign to view every recorded price snapshot, bullet, BE movement and exit.</div>
-      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Bid</th><th>Ask</th><th>Positions</th><th>Pending</th><th>Floating</th><th>Peak</th><th>Newest</th></tr></thead><tbody id="replay-rows"></tbody></table></div>
+      <div id="replay-summary" class="replay-summary muted">Choose a campaign to view the audited event timeline and recorded price snapshots.</div>
+      <h4>Exact campaign timeline</h4>
+      <div class="table-wrap"><table><thead><tr><th>Seq</th><th>Time</th><th>Type</th><th>Action</th><th>Side</th><th>Bullet</th><th>Price</th><th>P/L</th><th>Reason</th></tr></thead><tbody id="timeline-rows"></tbody></table></div>
+      <h4>Price snapshots</h4>
+      <div class="table-wrap"><table><thead><tr><th>Time</th><th>Bid</th><th>Ask</th><th>Positions</th><th>Pending</th><th>Floating</th><th>Peak</th><th>Newest</th><th>Event</th></tr></thead><tbody id="replay-rows"></tbody></table></div>
     </section>
 
     <section class="panel"><h3>Recent live records</h3><div class="table-wrap"><table><thead><tr><th>Time</th><th>Source</th><th>State</th><th>Positions</th><th>Pending</th><th>Event</th></tr></thead><tbody id="scans"></tbody></table></div></section>

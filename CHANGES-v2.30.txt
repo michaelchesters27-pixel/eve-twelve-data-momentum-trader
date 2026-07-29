@@ -1,0 +1,28 @@
+EVE Fixed Ladder Flight Recorder v2.30
+
+TRADING STRATEGY LEFT UNCHANGED
+1. Fixed 8 BUY STOP + 8 SELL STOP ladder.
+2. Exact 3.000 spacing and equal 0.01 bullets.
+3. Both original ladders remain fixed and the opposite ladder is not cancelled.
+4. Every bullet begins with a 2.000 SL.
+5. Every bullet moves to BE + 0.150 after +1.500 favourable movement.
+6. Newest-bullet SL still closes the complete campaign in this observation build.
+7. Campaign Profit Target still supports OFF, presets and any positive custom amount.
+
+ENGINEERING AND TELEMETRY REBUILD
+8. Unique bullets are counted by MT5 POSITION_IDENTIFIER rather than repeated callbacks or live-position totals.
+9. Duplicate deal callbacks are ignored safely.
+10. Historical BUY/SELL bullets fired are separated from currently open BUY/SELL positions.
+11. Campaign reports include unique bullet totals and maximum simultaneous positions.
+12. SL exits are labelled INITIAL STOP LOSS or BE PROTECTED STOP.
+13. All ladder, order, leg, protection, banking and campaign records receive a campaign-wide eventSequence.
+14. Order records now carry campaignId.
+15. Replay snapshots include unique bullet totals and the last event.
+16. Ladder rebuild history records the true reason instead of incorrectly reporting NEW M1 CANDLE.
+17. Heartbeat uses the X-Bot-Token header and is prioritised ahead of queued telemetry.
+18. Heartbeat reports sequence, age, live positions, unique bullets, queue depth and HTTP status.
+19. Dashboard campaign history includes a consistency audit.
+20. Dashboard replay includes an exact ordered campaign event timeline.
+21. Server tests reproduce the old v2.20 count mismatch and verify the repaired v2.30 accounting.
+22. Railway package updated to 2.3.0 and EA prefix updated to EVEL230.
+23. Magic 2907202622 and data namespace v220 are retained deliberately for safe campaign recovery and history continuity.

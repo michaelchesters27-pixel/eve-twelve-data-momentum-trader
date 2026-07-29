@@ -29,7 +29,9 @@ function render(state) {
   const mt5 = state.mt5 || {};
   $('mt5').textContent = mt5.fresh ? 'ONLINE' : 'OFFLINE';
   $('mt5').className = mt5.fresh ? 'positive' : 'negative';
-  $('mt5-detail').textContent = mt5.fresh ? `${mt5.symbol || ''} · heartbeat ${(Number(mt5.heartbeatAgeMs || 0) / 1000).toFixed(1)}s · ${mt5.lastHttpStatus || 'syncing'}` : 'Waiting for heartbeat';
+  $('mt5-detail').textContent = mt5.fresh
+    ? `${mt5.symbol || ''} · heartbeat #${mt5.heartbeatSequence || 0} · ${(Number(mt5.heartbeatAgeMs || 0) / 1000).toFixed(1)}s old · ${mt5.lastHttpStatus || 'syncing'}`
+    : mt5.lastSeenAt ? `Last heartbeat ${(Number(mt5.heartbeatAgeMs || 0) / 1000).toFixed(1)}s ago · ${mt5.lastHttpStatus || 'no status'}` : 'Waiting for first heartbeat';
   $('auto').textContent = state.control.autonomous && !state.control.emergency ? 'ON' : 'OFF';
   $('auto').className = state.control.autonomous && !state.control.emergency ? 'positive' : 'negative';
   $('engine-state').textContent = mt5.engineState || 'WAITING FOR MT5';
@@ -55,7 +57,9 @@ function render(state) {
   $('target-status').textContent = settings.profitTargetEnabled ? `ON — bank ${money(settings.profitTargetMoney)} then rearm` : 'OFF — natural sentinel mode';
 
   $('execution').innerHTML = row('Campaign ID', mt5.campaignId || 'Waiting to start') +
-    row('Campaign side', mt5.campaignCurrentSide || 'NONE') + row('BUY bullets', mt5.campaignBuyLegs || 0) + row('SELL bullets', mt5.campaignSellLegs || 0) +
+    row('Campaign side', mt5.campaignCurrentSide || 'NONE') + row('Unique bullets fired', mt5.uniqueBulletsFired || 0) +
+    row('BUY bullets fired', mt5.campaignBuyBulletsFired || 0) + row('SELL bullets fired', mt5.campaignSellBulletsFired || 0) +
+    row('Live BUY positions', mt5.campaignBuyLegs || 0) + row('Live SELL positions', mt5.campaignSellLegs || 0) +
     row('Positions', mt5.positionCount || 0) + row('Pending orders', mt5.pendingCount || 0) + row('Anchor', Number(mt5.ladderAnchor || 0).toFixed(3)) +
     row('Grid spacing', Number(mt5.gridSpacing || 3).toFixed(3)) + row('Initial fallback', Number(mt5.fallbackDistance || 2).toFixed(3)) +
     row('Halfway BE trigger', Number(mt5.beTriggerPrice || 1.5).toFixed(3)) + row('BE + costs buffer', Number(mt5.beBufferPrice || 0.15).toFixed(3)) +
@@ -79,7 +83,7 @@ function render(state) {
   const baskets = state.recentBaskets || [];
   $('basket-rows').innerHTML = baskets.map(item => `<tr>
     <td>${esc(formatTime(item.exitTime || item.receivedAt))}</td><td class="mono">${esc(item.campaignId || item.id)}</td><td>${esc(item.side || '—')}</td>
-    <td>${esc(item.positionsOpened || 0)}</td><td class="${cls(item.netProfit)}">${money(item.netProfit)}</td><td>${money(item.peakBasketProfit)}</td>
+    <td>${esc(item.uniqueBulletsFired ?? item.positionsOpened ?? 0)}</td><td>${esc(item.audit?.status || '—')}</td><td class="${cls(item.netProfit)}">${money(item.netProfit)}</td><td>${money(item.peakBasketProfit)}</td>
     <td>${money(item.profitGiveback)}</td><td>${item.profitTargetEnabled ? money(item.profitTargetMoney) : 'OFF'}</td><td class="reason">${esc(item.exitReason || '')}</td>
   </tr>`).join('');
   const selected = $('campaign-select').value;
@@ -119,8 +123,10 @@ $('load-replay').addEventListener('click', async () => {
   if (!id) return;
   const result = await api(`/api/replay/${encodeURIComponent(id)}`);
   const basket = result.basket || {};
-  $('replay-summary').innerHTML = `<b>${esc(id)}</b> · ${esc(basket.side || '—')} · ${esc(basket.positionsOpened || 0)} bullets · ${money(basket.netProfit)} · ${esc(basket.exitReason || '')}`;
-  $('replay-rows').innerHTML = (result.replay || []).map(item => `<tr><td>${esc(formatTime(item.at || item.receivedAt))}</td><td>${Number(item.bid || 0).toFixed(3)}</td><td>${Number(item.ask || 0).toFixed(3)}</td><td>${esc(item.positions || 0)}</td><td>${esc(item.pending || 0)}</td><td class="${cls(item.floatingProfit)}">${money(item.floatingProfit)}</td><td>${money(item.peakProfit)}</td><td>${esc(item.newestTicket || '—')}</td></tr>`).join('');
+  const audit = result.audit || {};
+  $('replay-summary').innerHTML = `<b>${esc(id)}</b> · ${esc(basket.side || '—')} · ${esc(basket.uniqueBulletsFired ?? basket.positionsOpened ?? 0)} bullets · ${money(basket.netProfit)} · <b>${esc(audit.status || 'NOT AUDITED')}</b> · ${esc(basket.exitReason || '')}`;
+  $('timeline-rows').innerHTML = (result.timeline || []).map(item => `<tr><td>${esc(item.eventSequence || '—')}</td><td>${esc(formatTime(item.at))}</td><td>${esc(item.type || '')}</td><td>${esc(item.action || '')}</td><td>${esc(item.side || '')}</td><td>${esc(item.bulletNumber || '')}</td><td>${item.price ? Number(item.price).toFixed(3) : '—'}</td><td class="${cls(item.netProfit)}">${money(item.netProfit)}</td><td class="reason">${esc(item.reason || '')}</td></tr>`).join('');
+  $('replay-rows').innerHTML = (result.replay || []).map(item => `<tr><td>${esc(formatTime(item.at || item.receivedAt))}</td><td>${Number(item.bid || 0).toFixed(3)}</td><td>${Number(item.ask || 0).toFixed(3)}</td><td>${esc(item.positions || 0)}</td><td>${esc(item.pending || 0)}</td><td class="${cls(item.floatingProfit)}">${money(item.floatingProfit)}</td><td>${money(item.peakProfit)}</td><td>${esc(item.newestTicket || '—')}</td><td class="reason">${esc(item.lastEvent || '')}</td></tr>`).join('');
 });
 setInterval(refresh, 2000);
 refresh();
