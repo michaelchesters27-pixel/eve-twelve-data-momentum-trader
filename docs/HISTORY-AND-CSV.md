@@ -1,15 +1,14 @@
-# History and CSV files
+# History and CSV exports
 
-The Railway dashboard provides:
+The Railway dashboard retains these exports:
 
-- **Scans CSV:** live Twelve Data and MT5 telemetry, engine state, positions, pending orders and the current event.
-- **Signals CSV:** every scout, reversal and continuation bullet that actually fired.
-- **Orders CSV:** every pending order placed, cancelled or rejected, including bracket/continuation role, price, fallback and spacing.
-- **Legs CSV:** every individual position open and close.
-- **Baskets CSV:** one row per completed campaign with bullets fired, maximum simultaneous lots, peak profit, MAE, giveback and exit reason.
-- **Banking CSV:** every full-campaign closure decision, including newest-leg fallback, manual close and hard loss protection.
-- **Events CSV:** Railway startup, controls and service events.
+- Scans CSV
+- Signals CSV
+- Baskets CSV
+- Legs CSV
+- Orders CSV
+- Banking CSV
 
-The default clean storage namespace is `v200`. Existing old v1.04 history is not mixed into the new statistics.
+The clean default namespace is `v210`, so results from the old breakout and v2.00 engines do not mix with this fixed-ladder sample.
 
-A Railway Volume mounted at `/data` is optional for operation but required if local JSONL history must survive Railway redeployments. Without a volume, the bot still trades and records during the current deployment, but Railway local history can reset after redeployment.
+Orders CSV records all 16 ladder placements, cancellations and rejections. Legs CSV records every fill and close. Baskets CSV records peak, MAE, giveback and the final exit reason.

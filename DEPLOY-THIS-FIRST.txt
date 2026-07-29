@@ -1,60 +1,35 @@
-EVE BULLET STORM TRADER v2.00
-============================
+EVE FIXED LADDER TRADER v2.10
 
-THIS REPLACES THE CURRENT GITHUB / RAILWAY PROJECT.
-USE A HEDGING DEMO ACCOUNT ONLY.
+THIS REPLACES THE CURRENT PROJECT. DO NOT CREATE A NEW GITHUB REPOSITORY OR RAILWAY SERVICE.
 
-GITHUB + RAILWAY
-----------------
-1. Open the existing GitHub repository: eve-twelve-data-momentum-trader.
-2. Delete the existing repository contents.
-3. Upload the COMPLETE contents of this ZIP to the repository root.
-4. Commit the replacement.
-5. Railway redeploys the existing service and keeps the same domain.
-6. Do not create a second GitHub repository or Railway project.
-7. Do not change the existing Railway variables.
+GITHUB
+1. Delete the existing repository contents.
+2. Upload every file and folder from this ZIP.
+3. Commit the replacement.
+4. Railway will redeploy the existing service automatically.
 
-The existing variables remain valid:
-- BOT_TOKEN
-- TWELVE_DATA_API_KEY
-- TWELVE_DATA_SYMBOL
-- TWELVE_DATA_WS_SYMBOLS
-- TIMEZONE
-- DATA_DIR
-- AUTO_ENABLED
-- SCAN_LOG_SECONDS
-- DASHBOARD_ORIGIN
-
-Old quality/threshold variables can remain in Railway. v2.00 ignores them for trade permission.
-The built-in clean history namespace is v200. An optional BULLET_DATA_NAMESPACE override exists but is not required.
+RAILWAY
+- Keep the existing BOT_TOKEN.
+- Keep the existing TWELVE_DATA_API_KEY.
+- Keep the existing Twelve Data symbol variables.
+- Keep DATA_DIR and all current networking settings.
+- No new Railway variables are required.
+- The default clean history namespace is v210.
 
 MT5
----
-1. Remove v1.04 from the chart.
-2. Copy mt5/EVE_Twelve_Data_Bullet_Storm_v2.00.mq5 into MQL5/Experts.
-3. Open it in MetaEditor and press Compile.
-4. Require 0 errors before continuing.
-5. Attach it to ONE XAUUSD M1 chart on a HEDGING DEMO account.
-6. Use the same Railway URL and BOT_TOKEN.
-7. Tick Allow Algo Trading.
-8. Keep the Railway domain in MT5 WebRequest permissions.
-9. Do not run v1.04 and v2.00 together.
+1. Remove the old EA from the XAUUSD chart.
+2. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.10.mq5 into MQL5/Experts.
+3. Open it in MetaEditor and compile it.
+4. Require 0 compile errors before attaching it.
+5. Attach it to one XAUUSD M1 chart on an IC Markets hedging DEMO account.
+6. Enter the same Railway URL and BOT_TOKEN.
+7. Tick Allow Algo Trading and allow WebRequest for the Railway domain.
+8. Do not run an older EVE EA with the same XAUUSD account at the same time.
 
-EXPECTED DASHBOARD STATE
-------------------------
-When flat and active, the dashboard should show:
-TWO-SIDED BRACKET ARMED
-POSITIONS 0
-PENDING 2
-
-When bullet 1 fires:
-BULLET 1 - REVERSAL STILL ARMED
-
-When bullet 2 in the same direction fires:
-BULLET CAMPAIGN LOCKED
-
-NO QUALITY FILTER
------------------
-Twelve Data is telemetry and history only.
-There is no 80-point score, confirmed-breakout gate, session gate or M5/M15/H1 permission filter.
-Only hard execution and capital protection can block new bullets.
+WHAT YOU SHOULD SEE
+- 8 BUY STOPs above price.
+- 8 SELL STOPs below price.
+- Exact 3.000 price spacing.
+- 0.01 lot on every level.
+- 2.000 fallback SL on every level.
+- 16 pending orders while idle.

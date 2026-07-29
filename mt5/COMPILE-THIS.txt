@@ -1,13 +1,14 @@
-Compile this file in MetaEditor:
+COMPILE THIS FILE
 
-EVE_Twelve_Data_Bullet_Storm_v2.00.mq5
+EVE_Twelve_Data_Fixed_Ladder_v2.10.mq5
 
-Requirements:
-- 0 compile errors
-- Hedging demo account
-- ONE XAUUSD M1 chart
-- Same Railway URL and BOT_TOKEN
-- Allow Algo Trading enabled
-- Existing Railway domain allowed under MT5 WebRequest settings
+Expected result: 0 errors.
 
-Remove v1.04 before attaching v2.00. Do not run both versions together.
+Default ladder:
+- 8 BUY STOPs
+- 8 SELL STOPs
+- 3.000 spacing
+- 0.01 every order
+- 2.000 fallback every order
+
+Remove the old EA before attaching v2.10. Do not run both together.

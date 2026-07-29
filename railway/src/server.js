@@ -56,7 +56,7 @@ function maybeLogTwelveScan(tick) {
     m15Direction: context.m15?.direction || '—', h1Direction: context.h1?.direction || '—',
     mt5Fresh: broker.fresh, engineState: broker.engineState, positions: integer(broker.positionCount),
     pending: integer(broker.pendingCount), side: broker.side || 'NONE', floatingProfit: finite(broker.floatingProfit),
-    lastEvent: broker.lastEvent || '', note: 'Twelve Data is telemetry only. MT5 bullet geometry controls entries.'
+    lastEvent: broker.lastEvent || '', note: 'Twelve Data is telemetry only. MT5 fixed-ladder geometry controls entries.'
   }, 'scan');
 }
 function onTick(tick) {
@@ -104,7 +104,7 @@ function overview() {
     twelveData: { ...twelveStatus, tickAgeMs, priceFresh: tickAgeMs !== null && tickAgeMs <= config.wsStaleMs, staleAfterMs: config.wsStaleMs },
     mt5: currentMt5(), feature: latestFeature, context: latestContext(),
     engine: {
-      name: 'AGGRESSIVE TWO-SIDED BULLET ENGINE',
+      name: 'AGGRESSIVE FIXED TWO-SIDED LADDER',
       entryPermission: 'MT5 LOCAL — NO QUALITY FILTER',
       twelveDataRole: 'LIVE TELEMETRY AND HISTORY ONLY',
       liveDirection: liveDirection(),
@@ -170,7 +170,7 @@ function controlText() {
     'decision_quality=0', 'decision_buy_quality=0', 'decision_sell_quality=0',
     'decision_add_allowed=true', `decision_valid_until=${Date.now() + 60_000}`,
     'decision_ttl_remaining_ms=60000', `server_now_ms=${Date.now()}`,
-    'decision_reason=MT5 TWO-SIDED BULLET ENGINE CONTROLS ENTRIES',
+    'decision_reason=MT5 FIXED TWO-SIDED LADDER CONTROLS ENTRIES',
     'decision_regime=LOCAL', 'decision_m5=TELEMETRY', 'decision_m15=TELEMETRY', 'decision_h1=TELEMETRY'
   ].join('\n');
 }
@@ -231,7 +231,7 @@ export function createHttpServer() {
       const match = pathname.match(/^\/api\/export\/(scans|signals|baskets|legs|orders|banks|events|contexts|mt5)\.csv$/);
       if (match && request.method === 'GET') {
         const collection = match[1];
-        return send(response, 200, toCsv([...store.all(collection)].reverse()), 'text/csv; charset=utf-8', { 'Content-Disposition': `attachment; filename="eve-bullet-storm-${collection}.csv"` });
+        return send(response, 200, toCsv([...store.all(collection)].reverse()), 'text/csv; charset=utf-8', { 'Content-Disposition': `attachment; filename="eve-fixed-ladder-${collection}.csv"` });
       }
       return send(response, 404, { ok: false, error: 'NOT_FOUND' });
     } catch (error) {

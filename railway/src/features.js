@@ -131,7 +131,7 @@ export class LiveFeatureEngine {
       tickCount: ticks.length,
       historySpanMs,
       warmupReasons,
-      note: 'Telemetry only. MT5 bullet geometry controls every entry.'
+      note: 'Telemetry only. MT5 fixed-ladder geometry controls every entry.'
     };
   }
 

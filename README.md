@@ -1,37 +1,38 @@
-# EVE Bullet Storm Trader v2.00
+# EVE Fixed Ladder Trader v2.10
 
-A full replacement for the conservative confirmed-breakout engine.
+This package completely replaces the current GitHub/Railway strategy while keeping the same repository, Railway service, public domain, BOT_TOKEN and Twelve Data connection.
 
-This is an aggressive XAUUSD **demo** trading system. MT5 arms both directions around every new M1 candle. Price chooses the first bullet. If the move continues, equal-size bullets are added. Every bullet carries the same campaign fallback distance, and the newest bullet is the sentinel: when its fallback is hit, the entire remaining campaign is closed.
+## Trading behaviour
 
-## What runs where
+- MT5 anchors one fixed ladder around the current broker price.
+- 8 BUY STOP orders are placed above the anchor.
+- 8 SELL STOP orders are placed below the anchor.
+- Every level is exactly 3.000 XAUUSD price units apart.
+- Every order uses the same 0.01 lot.
+- Every position has the same 2.000 broker-side fallback SL.
+- Both ladders stay active until one side reaches its second filled bullet.
+- When bullet 2 fills in one direction, that direction locks, all opposite pending orders are cancelled, and any opposite open hedge is closed.
+- The newest filled bullet on the locked side becomes the sentinel.
+- If the newest bullet reaches its fixed fallback, the full basket closes.
+- A basket profit floor activates after at least 2 bullets and protects 60% of the peak after the trigger is reached.
+- After a campaign closes, a completely fresh 8x8 ladder is rebuilt immediately.
+- No quality score, breakout threshold, M5/M15/H1 permission, session restriction or cooldown controls entries.
+- Twelve Data remains connected for live telemetry, scan history and analysis only. MT5 broker prices place and manage orders.
 
-- **MT5:** two-sided M1 bracket, trade execution, equal-size bullet ladder, reversal before leg 2, direction lock after leg 2, broker-side stop loss on every bullet, newest-leg basket closure and hard capital protection.
-- **Railway:** dashboard, controls, history, CSV exports and persistent service state.
-- **Twelve Data:** live WebSocket speed/acceleration telemetry plus completed M1/M5/M15/H1 context for recording and later analysis. Twelve Data does **not** grant or refuse trades in v2.00.
+## Default hard limits
 
-## Core behaviour
+- Maximum live positions: 10
+- Maximum total lots: 0.10
+- Hard basket loss: $5 or 1% of balance, whichever is lower
+- Hard daily loss: $20 or 4% of start-of-day balance, whichever is lower
+- Hard spread limit: 150 broker points
+- Hedging demo account required
 
-1. While flat, place one BUY STOP and one SELL STOP around price.
-2. The first triggered order starts the campaign.
-3. Keep the opposite pending order alive until the second same-direction bullet activates.
-4. If the opposite side triggers first, close the original side and flip the campaign.
-5. Once leg 2 activates, cancel the opposite order and lock the direction.
-6. Keep placing equal-size continuation bullets at the fixed campaign spacing.
-7. Every bullet has the same fixed campaign fallback distance.
-8. If the newest bullet hits its fallback, close all remaining bullets.
-9. Rearm immediately and start again.
+## Identity
 
-## Default hard protection
-
-- Fixed lot per bullet: `0.01`
-- Maximum open positions: `10`
-- Maximum total lots: `0.10`
-- Hard basket loss: tighter of `$5.00` or `1%` of balance
-- Daily loss block: tighter of `$20.00` or `4%` of estimated day-start balance
-- Catastrophic spread ceiling: `150` broker points
-- No martingale and no lot multiplication
-
-## Important
-
-This is experimental software and has not been proven profitable. Use a **hedging demo account only**. MetaEditor is not available in this environment, so the MQ5 file must be compiled locally and must show `0 errors` before attachment.
+- EA: `EVE_Twelve_Data_Fixed_Ladder_v2.10.mq5`
+- Version: 2.10
+- Magic number: 2907202621
+- Order prefix: EVEL210
+- Railway package: 2.1.0
+- Data namespace: v210

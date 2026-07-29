@@ -3,25 +3,25 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>EVE Bullet Storm Trader</title>
+  <title>EVE Fixed Ladder Trader</title>
   <link rel="stylesheet" href="/styles.css" />
 </head>
 <body>
   <main class="shell">
     <header>
-      <div><p class="eyebrow">AGGRESSIVE XAUUSD DEMO ENGINE</p><h1>EVE Bullet Storm Trader</h1><p id="subtitle">Two-sided M1 bracket · equal bullets · newest-leg fallback · Twelve Data telemetry</p></div>
+      <div><p class="eyebrow">AGGRESSIVE XAUUSD DEMO ENGINE</p><h1>EVE Fixed Ladder Trader</h1><p id="subtitle">8 BUY STOPs + 8 SELL STOPs · 3.000 spacing · equal 0.01 bullets · newest-leg sentinel</p></div>
       <div class="auth"><input id="token" type="password" placeholder="BOT_TOKEN" autocomplete="current-password" /><button id="connect">Connect</button></div>
     </header>
 
     <section class="hero grid four">
-      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.0.0</small></article>
+      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.1.0</small></article>
       <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">Telemetry stream</small></article>
       <article class="card"><span>MT5 EA</span><strong id="mt5">OFFLINE</strong><small id="mt5-detail">Waiting for heartbeat</small></article>
       <article class="card"><span>Autonomous</span><strong id="auto">OFF</strong><small id="mode">DEMO</small></article>
     </section>
 
     <section class="decision">
-      <div><p class="eyebrow">LIVE BULLET ENGINE</p><h2 id="engine-state">WAITING FOR MT5</h2><p id="reason">No quality score. MT5 arms both directions and price chooses.</p></div>
+      <div><p class="eyebrow">LIVE FIXED LADDER</p><h2 id="engine-state">WAITING FOR MT5</h2><p id="reason">No quality score. MT5 preloads both ladders and price chooses the direction.</p></div>
       <div class="quality"><div><span>POSITIONS</span><b id="positions">0</b></div><div><span>PENDING</span><b id="pending">0</b></div><div><span>LOCKED</span><b id="locked">NO</b></div></div>
     </section>
 
@@ -34,7 +34,7 @@
 
     <section class="grid two">
       <article class="panel"><h3>Twelve Data telemetry</h3><div id="telemetry" class="rows"></div></article>
-      <article class="panel"><h3>MT5 bullet campaign</h3><div id="execution" class="rows"></div></article>
+      <article class="panel"><h3>MT5 fixed-ladder campaign</h3><div id="execution" class="rows"></div></article>
     </section>
 
     <section class="controls panel">

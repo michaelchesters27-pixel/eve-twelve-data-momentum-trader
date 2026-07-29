@@ -1,63 +1,41 @@
-# v2.00 strategy specification
+# EVE Fixed Ladder Trader v2.10 strategy
 
-## Flat state
+## Campaign start
 
-At each new M1 candle, and immediately after a campaign closes, MT5 maintains:
+When the EA is flat and autonomous trading is enabled, it records the current MT5 midpoint as the campaign anchor and preloads a fixed ladder:
 
-- one BUY STOP above current Ask;
-- one SELL STOP below current Bid;
-- a broker-side fallback SL on both orders.
+- BUY STOP levels: anchor + 3, +6, +9, +12, +15, +18, +21, +24
+- SELL STOP levels: anchor - 3, -6, -9, -12, -15, -18, -21, -24
 
-The bracket is refreshed while flat. There is no predictive score required before arming it.
+Every order is 0.01 lot and has a 2.000 fallback SL.
 
-## Bullet 1
+## Direction selection
 
-The first triggered stop starts the campaign. The campaign locks:
+Price chooses the direction. There is no predictive score or timeframe permission.
 
-- one fallback distance;
-- one bullet spacing distance;
-- one fixed lot size.
-
-The opposite stop remains active after bullet 1.
-
-## Before direction lock
-
-A same-direction continuation stop and the opposite reversal stop are both maintained.
-
-- If the same-direction continuation triggers first, it becomes bullet 2.
-- If the opposite stop triggers first, the original-side position is closed and the campaign flips to the newly triggered side.
+Both ladders remain active after the first bullet. This allows the opposite first-level order to hedge a sharp reversal. The campaign does not lock until one side reaches two filled bullets.
 
 ## Direction lock
 
-When bullet 2 in the same direction is active:
+When a side reaches bullet 2:
 
-- the opposite pending order is cancelled;
-- the campaign direction is locked;
-- further equal-size continuation bullets are placed at the fixed campaign spacing.
+- that side becomes the locked campaign direction;
+- all opposite pending orders are cancelled;
+- any opposite open hedge is closed;
+- remaining same-direction pending levels stay in place.
 
-## Fallback rule
+## Exit
 
-Every bullet receives the same campaign fallback distance. The latest active bullet is the sentinel.
+The newest filled bullet on the locked side is the sentinel. Every bullet has its own 2.000 SL. If the sentinel SL is reached, all remaining positions and pending orders close.
 
-When the newest bullet reaches its broker-side SL or fallback:
+Basket peak protection is also active after at least two bullets. Once the trigger is met, the basket closes if floating profit falls to 60% of its recorded peak, subject to commission reserve.
 
-1. cancel every remaining pending order;
-2. close every remaining campaign position;
-3. record the basket, legs, orders, banking decision and signal history;
-4. rearm a fresh two-sided bracket immediately.
+Hard basket loss, hard daily loss, emergency stop, terminal status and catastrophic spread remain the only operating protections.
 
-## Hard protection only
+## Rearm
 
-Ordinary trading is not blocked by quality scoring. New bullets can be blocked only by:
-
-- Auto disabled or EA paused;
-- emergency stop;
-- disconnected/disabled MT5 trading;
-- broker spread above the catastrophic ceiling;
-- maximum positions or maximum total lots reached;
-- hard basket loss;
-- daily loss ceiling.
+After all positions and pending orders are flat, the EA records the campaign, resets, anchors a new ladder around the current MT5 price and rearms immediately.
 
 ## Twelve Data
 
-Twelve Data records live speed, acceleration, tick expansion and completed timeframe context. These fields support review and later optimisation. They do not control entry permission in v2.00.
+Twelve Data records speed, acceleration, tick activity and timeframe context. It never grants or refuses an MT5 ladder order.

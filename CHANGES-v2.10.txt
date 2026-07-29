@@ -1,0 +1,15 @@
+EVE Fixed Ladder Trader v2.10
+
+1. Replaced the single-bracket/dynamic-bullet engine with a fully preloaded fixed ladder.
+2. Added 8 BUY STOP and 8 SELL STOP levels by default.
+3. Locked spacing to 3.000 XAUUSD price units.
+4. Locked every bullet to 0.01 lot by default.
+5. Added the same 2.000 broker-side fallback SL to every bullet.
+6. Kept both ladders active until one direction reaches bullet 2.
+7. Bullet 2 locks the direction, cancels the opposite pending ladder and closes any opposite hedge.
+8. The newest locked-side bullet is the sentinel for full-basket closure.
+9. Enabled basket peak protection after at least 2 bullets, retaining 60% of peak profit.
+10. Removed quality, breakout, timeframe, session and cooldown entry permission.
+11. Twelve Data remains telemetry/history only and never blocks ordinary entries.
+12. Added exact operating-block reasons instead of the vague HARD OPERATING OR CAPITAL BLOCK message.
+13. Added clean v210 history and new Magic 2907202621 / prefix EVEL210.

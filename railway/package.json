@@ -1,9 +1,9 @@
 {
   "name": "eve-twelve-data-momentum-trader",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "private": true,
   "type": "module",
-  "description": "Aggressive XAUUSD two-sided bullet engine with Twelve Data telemetry, Railway history and protected MT5 execution.",
+  "description": "Aggressive XAUUSD fixed 8x8 pending-order ladder with 3.000 spacing, equal 0.01 bullets, Twelve Data telemetry, Railway history and protected MT5 execution.",
   "engines": { "node": ">=22" },
   "scripts": {
     "start": "node src/server.js",
