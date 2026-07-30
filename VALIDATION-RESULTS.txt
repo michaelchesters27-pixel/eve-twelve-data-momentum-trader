@@ -1,32 +1,19 @@
-EVE FIXED LADDER FLIGHT RECORDER v2.50 VALIDATION
-Date: 2026-07-29
+EVE Fixed Ladder Flight Recorder v2.61 validation
 
-PASSED
-- Project source validation.
-- MQL lexical bracket/string/comment balance.
-- MQL StringFormat placeholder/argument count validation.
-- Required input/function/API presence checks.
-- Forbidden conservative entry-filter checks.
-- JavaScript syntax checks for Railway server, feature engine, Twelve Data client and dashboard.
-- 13 Railway automated tests.
-- Profit-target settings tests.
-- Daily-loss ON/OFF/custom/reset settings tests.
-- Campaign accounting and audit tests.
-- Local Railway health, settings, heartbeat, reset and state smoke tests.
+Completed in build environment:
+- Project source validator: passed.
+- MQL source lexical balance and StringFormat placeholder checks: passed.
+- JavaScript syntax checks: passed.
+- Node test suite: 17/17 passed.
+- Legacy v2.50 settings migration test: passed; existing target is preserved and audit protection defaults to ON at $4.00 / $1.00.
+- Railway health and authenticated settings smoke tests: passed.
+- Settings survived a full server restart: passed.
+- Corrupt-primary settings file recovered from backup: passed.
+- Missing-server settings recovered from MT5 at the same settings version: passed.
+- Next dashboard change incremented above the recovered MT5 settings version: passed.
+- Confirmed ladder generated exactly 16 deterministic placement records: passed.
+- Basket peak/realised P/L reconciliation test: passed.
+- ZIP integrity test: passed after final packaging.
 
-LOCKED SOURCE BEHAVIOUR VERIFIED
-- 8 BUY STOP + 8 SELL STOP fixed ladder.
-- 3.000 spacing and 0.01 equal lots.
-- Bullet 1 fixed quick cut at 0.750 adverse price.
-- Tick-level fallback closes the campaign if the broker-side quick-cut modification is delayed or rejected.
-- Bullet 2 onward retains the 2.000 initial fallback.
-- Every bullet moves to BE +0.150 at +1.500.
-- BE-protected SL closes that bullet only.
-- Newest unprotected original SL closes the complete campaign.
-- Profit target supports OFF, presets and custom amounts.
-- Daily loss supports ON/OFF, custom amount and reset-now.
-- First-bullet quick-cut events and exits are recorded.
-- Existing v220 history namespace and Magic 2907202622 retained.
-
-NOT AVAILABLE IN THIS ENVIRONMENT
-- MetaEditor/MT5 compilation. Compile EVE_Twelve_Data_Fixed_Ladder_v2.50.mq5 locally and require 0 errors before attaching.
+Not available in this environment:
+- MetaEditor / MQL5 compiler. Compile EVE_Twelve_Data_Fixed_Ladder_v2.61.mq5 locally and require 0 errors before attaching it.

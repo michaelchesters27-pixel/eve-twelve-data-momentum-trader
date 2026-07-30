@@ -1,8 +1,1 @@
-Product: EVE Fixed Ladder Flight Recorder
-EA version: 2.50
-Railway version: 2.5.0
-EA: EVE_Twelve_Data_Fixed_Ladder_v2.50.mq5
-Magic: 2907202622
-Order prefix: EVEL250
-Data namespace: v220
-Build purpose: Bullet 1 fixed 0.750 quick cut with existing fixed ladder, halfway BE, profit target and daily-loss controls.
+2.61

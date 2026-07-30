@@ -1,28 +1,35 @@
-EVE FIXED LADDER FLIGHT RECORDER v2.50
+EVE FIXED LADDER FLIGHT RECORDER v2.61
 
-WHAT CHANGED
-- Bullet 1 is cut when price moves 0.750 against it.
-- The bot closes that campaign, deletes all pending orders and immediately builds a fresh ladder.
-- Bullet 2 onward retains the 2.000 initial fallback.
-- Every bullet still moves to BE + costs after +1.500.
-- Protected BE exits still close only that bullet.
-- The dashboard now records and counts first-bullet quick cuts.
+AUDIT-DRIVEN CHANGE
+- Profit target remains $5.00.
+- Basket peak protection defaults ON.
+- Protection activates when basket peak reaches +$4.00.
+- Maximum giveback is $1.00 from the highest peak.
+- Everything else in the v2.50 trading engine remains unchanged.
 
-DEPLOYMENT
-1. Stop/remove v2.40 from MT5.
-2. Replace the complete GitHub repository contents with this package.
-3. Keep the existing Railway service, domain and variables.
-4. Wait for Railway to show v2.5.0 ONLINE.
-5. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.50.mq5 into MQL5/Experts.
-6. Compile in MetaEditor and require 0 errors.
-7. Attach only v2.50 to XAUUSD M1 on the hedging demo account.
-8. Confirm Railway, Twelve Data and MT5 EA all show ONLINE.
+SAFE DEPLOYMENT
+1. Confirm v2.50 has zero live positions and the campaign is flat.
+2. Download/export all eight CSV files as the permanent v2.50 baseline. This has already been done, but keep your local copies.
+3. Pause/disable v2.50 auto trading.
+4. Replace the COMPLETE contents of the existing GitHub repository with this package.
+5. Keep the existing Railway project, service, domain and variables.
+6. Wait for Railway to show v2.6.1 ONLINE.
+7. Copy mt5/EVE_Twelve_Data_Fixed_Ladder_v2.61.mq5 into MQL5/Experts.
+8. Compile in MetaEditor and require 0 errors.
+9. Remove v2.50 from the chart and attach ONLY v2.61 to XAUUSD M1 on the hedging demo account.
+10. Confirm Railway, Twelve Data and MT5 EA show ONLINE.
+11. Confirm dashboard settings show target $5.00 and basket protection $4.00 activation / $1.00 giveback.
+
+HISTORY PRESERVATION
+- Magic number remains 2907202622.
+- Data namespace remains v220.
+- Do not delete the Railway /data volume or change DATA_DIR.
+- GitHub replacement does not intentionally delete /data; the exported CSV baseline remains the guaranteed external backup.
 
 UNCHANGED
-- Magic 2907202622.
-- Data namespace v220.
 - 8 BUY STOPs + 8 SELL STOPs.
 - 3.000 fixed spacing.
 - 0.01 lots.
-- Profit target ON/OFF and custom amount.
-- Daily loss ON/OFF, custom amount and reset button.
+- Bullet 1 quick cut 0.750.
+- Bullet BE at +1.500 with +0.150 buffer.
+- Immediate rearm.

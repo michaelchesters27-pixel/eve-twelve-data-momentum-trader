@@ -1,13 +1,5 @@
-COMPILE THIS FILE IN METAEDITOR
+Compile this complete EA in MetaEditor:
 
-EVE_Twelve_Data_Fixed_Ladder_v2.50.mq5
+EVE_Twelve_Data_Fixed_Ladder_v2.61.mq5
 
 Required result: 0 errors.
-
-Attach only v2.50 to XAUUSD M1 on the IC Markets hedging demo account. Do not run v2.40 and v2.50 together.
-
-Default v2.50 change:
-- Bullet 1 quick cut: 0.750 adverse price.
-- Bullet 2 onward initial fallback: 2.000.
-- Every bullet BE trigger: +1.500.
-- BE buffer: +0.150.

@@ -1,9 +1,9 @@
 {
   "name": "eve-twelve-data-momentum-trader",
-  "version": "2.5.0",
+  "version": "2.6.1",
   "private": true,
   "type": "module",
-  "description": "Fixed XAUUSD 8x8 pending-order ladder with a 0.750 adverse quick-cut for Bullet 1, halfway BE protection for every bullet, protected-bullet-only exits, and selectable profit/daily-loss controls.",
+  "description": "Fixed XAUUSD 8x8 pending-order ladder with a 0.750 adverse quick-cut for Bullet 1, halfway BE protection for every bullet, protected-bullet-only exits, and selectable profit/daily-loss controls, plus audit-corrected basket peak protection and recorder reconciliation.",
   "engines": {
     "node": ">=22"
   },

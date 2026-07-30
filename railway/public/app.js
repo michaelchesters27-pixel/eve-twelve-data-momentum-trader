@@ -53,8 +53,15 @@ function render(state) {
 
   const settings = state.settings || {};
   $('target-enabled').checked = Boolean(settings.profitTargetEnabled);
-  $('target-money').value = Number(settings.profitTargetMoney || 7).toFixed(2);
+  $('target-money').value = Number(settings.profitTargetMoney || 5).toFixed(2);
   $('target-status').textContent = settings.profitTargetEnabled ? `ON — bank ${money(settings.profitTargetMoney)} then rearm` : 'OFF — natural mode';
+
+  $('peak-protection-enabled').checked = Boolean(settings.basketPeakProtectionEnabled);
+  $('peak-activation-money').value = Number(settings.basketPeakActivationMoney || 4).toFixed(2);
+  $('peak-giveback-money').value = Number(settings.basketPeakGivebackMoney || 1).toFixed(2);
+  $('peak-protection-status').textContent = settings.basketPeakProtectionEnabled
+    ? `ON — activate ${money(settings.basketPeakActivationMoney)} · giveback ${money(settings.basketPeakGivebackMoney)} · applies next campaign`
+    : 'OFF — no basket peak protection';
 
   $('daily-loss-enabled').checked = Boolean(settings.dailyLossEnabled);
   $('daily-loss-money').value = Number(settings.dailyLossMoney || 20).toFixed(2);
@@ -77,6 +84,8 @@ function render(state) {
     row('Halfway BE trigger', Number(mt5.beTriggerPrice || 1.5).toFixed(3)) + row('BE + costs buffer', Number(mt5.beBufferPrice || 0.15).toFixed(3)) +
     row('Every bullet protection', 'At +1.500 → BE + costs') + row('Protected BE exit', 'Close that bullet only') +
     row('Newest bullet', mt5.newestTicket || '—') + row('Floating P/L', money(mt5.floatingProfit || 0)) + row('Peak P/L', money(mt5.peakBasketProfit || 0)) +
+    row('Peak protection', mt5.basketPeakProtectionEnabled ? (mt5.basketPeakProtectionArmed ? `ARMED · floor ${money(mt5.basketPeakProtectionFloor)}` : `Waiting for ${money(mt5.basketPeakActivationMoney)}`) : 'OFF') +
+    row('Peak giveback', money(mt5.basketPeakGivebackMoney || 0)) +
     row('Daily loss P/L', money(dailyPnl)) + row('Daily loss status', settings.dailyLossEnabled ? (mt5.dailyLossBlocked ? 'LOCKED' : 'ACTIVE') : 'OFF');
 
   const engine = state.engine || {}, context = state.context || {};
@@ -95,6 +104,8 @@ function render(state) {
   $('lab-fail-rate').textContent = `${lab.newestFailureRate || 0}% of campaigns`;
   $('lab-quick-cuts').textContent = lab.firstBulletQuickCuts || 0;
   $('lab-quick-cut-rate').textContent = `${lab.firstBulletQuickCutRate || 0}% of campaigns`;
+  $('lab-peak-exits').textContent = lab.basketPeakProtectionExits || 0;
+  $('lab-peak-exit-rate').textContent = `${lab.basketPeakProtectionExitRate || 0}% of campaigns`;
 
   const baskets = state.recentBaskets || [];
   $('basket-rows').innerHTML = baskets.map(item => `<tr>
@@ -136,6 +147,17 @@ $('apply-target').addEventListener('click', async () => {
   if (!Number.isFinite(payload.profitTargetMoney) || payload.profitTargetMoney < 0.01) return alert('Enter a target of at least $0.01.');
   const result = await api('/api/settings', { method: 'POST', body: JSON.stringify(payload) });
   $('target-status').textContent = result.settings.profitTargetEnabled ? `ON — bank ${money(result.settings.profitTargetMoney)} then rearm` : 'OFF — natural mode';
+  refresh();
+});
+$('apply-peak-protection').addEventListener('click', async () => {
+  const payload = {
+    basketPeakProtectionEnabled: $('peak-protection-enabled').checked,
+    basketPeakActivationMoney: Number($('peak-activation-money').value),
+    basketPeakGivebackMoney: Number($('peak-giveback-money').value)
+  };
+  if (!Number.isFinite(payload.basketPeakActivationMoney) || payload.basketPeakActivationMoney < 0.01) return alert('Enter an activation amount of at least $0.01.');
+  if (!Number.isFinite(payload.basketPeakGivebackMoney) || payload.basketPeakGivebackMoney < 0.01) return alert('Enter a giveback amount of at least $0.01.');
+  await api('/api/settings', { method: 'POST', body: JSON.stringify(payload) });
   refresh();
 });
 $('apply-daily-loss').addEventListener('click', async () => {

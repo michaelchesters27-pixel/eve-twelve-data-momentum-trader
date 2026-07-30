@@ -1,0 +1,28 @@
+EVE Fixed Ladder Flight Recorder v2.61
+
+ONE TRADING CHANGE
+- Added dashboard-controlled basket peak protection.
+- Default activation: basket peak +$4.00.
+- Default maximum giveback: $1.00.
+- Peak +$4.20 creates a $3.20 floor; peak +$4.80 creates a $3.80 floor.
+- The normal $5.00 target still closes first when reached.
+- Protection settings are snapshotted at campaign start.
+
+ENGINEERING FIXES
+- Persistent target/daily/peak controls with atomic primary and backup files.
+- MT5 local setting backup and Railway recovery after missing settings.
+- Campaign settings version recorded.
+- Close legs retain campaign ID.
+- Unique-position bullet reconciliation.
+- Peak P/L cannot be below realised P/L.
+- Sixteen deterministic ladder placement records per campaign.
+- Duplicate record IDs de-duplicated after restart.
+- Replay, campaign, bullet, order and banking identities aligned.
+
+UNCHANGED
+- Fixed 8 BUY STOP + 8 SELL STOP ladder.
+- 3.000 spacing and 0.01 lots.
+- Bullet 1 quick cut at 0.750 adverse.
+- Bullet 2 onward fallback 2.000.
+- Individual BE at +1.500 with +0.150 cost buffer.
+- Immediate rearm and all existing hard protections.

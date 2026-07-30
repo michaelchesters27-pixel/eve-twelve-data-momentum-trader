@@ -18,7 +18,7 @@
     </header>
 
     <section class="hero grid four">
-      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.5.0</small></article>
+      <article class="card"><span>Railway</span><strong id="railway">ONLINE</strong><small id="version">v2.6.1</small></article>
       <article class="card"><span>Twelve Data</span><strong id="twelve">WARMING</strong><small id="twelve-detail">Telemetry stream</small></article>
       <article class="card"><span>MT5 EA</span><strong id="mt5">OFFLINE</strong><small id="mt5-detail">Waiting for heartbeat</small></article>
       <article class="card"><span>Autonomous</span><strong id="auto">OFF</strong><small id="mode">DEMO</small></article>
@@ -48,9 +48,24 @@
           <button type="button" data-target="1">$1</button><button type="button" data-target="2">$2</button><button type="button" data-target="3">$3</button><button type="button" data-target="5">$5</button>
           <button type="button" data-target="7">$7</button><button type="button" data-target="10">$10</button><button type="button" data-target="16">$16</button><button type="button" data-target="25">$25</button>
         </div>
-        <label>Custom target ($)<input id="target-money" type="number" min="0.01" step="0.01" value="7.00" /></label>
+        <label>Custom target ($)<input id="target-money" type="number" min="0.01" step="0.01" value="5.00" /></label>
         <button id="apply-target" class="primary" type="button">Apply profit target</button>
         <strong id="target-status">Natural mode</strong>
+      </div>
+    </section>
+
+    <section class="panel profit-panel">
+      <div>
+        <p class="eyebrow">BASKET PEAK PROTECTION</p>
+        <h3>Protect a campaign after it proves itself</h3>
+        <p class="muted">Audit default: activate after +$4.00 and close the full basket after a $1.00 fall from its highest floating profit. Settings are captured when the next campaign starts, so changing them does not interfere with a campaign already running.</p>
+      </div>
+      <div class="profit-controls">
+        <label class="switch-row"><input id="peak-protection-enabled" type="checkbox" checked /><span>Basket peak protection ON</span></label>
+        <label>Activate after basket reaches ($)<input id="peak-activation-money" type="number" min="0.01" step="0.01" value="4.00" /></label>
+        <label>Maximum giveback from peak ($)<input id="peak-giveback-money" type="number" min="0.01" step="0.01" value="1.00" /></label>
+        <button id="apply-peak-protection" class="primary" type="button">Apply for next campaign</button>
+        <strong id="peak-protection-status">ON — activate $4.00 · giveback $1.00</strong>
       </div>
     </section>
 
@@ -78,12 +93,13 @@
       <article class="panel"><h3>Twelve Data telemetry</h3><div id="telemetry" class="rows"></div></article>
     </section>
 
-    <section class="grid five metrics lab">
+    <section class="grid six metrics lab">
       <article class="card"><span>Average bullets</span><strong id="lab-bullets">0.00</strong><small>per campaign</small></article>
       <article class="card"><span>BE activations</span><strong id="lab-be">0</strong><small>halfway protection events</small></article>
       <article class="card"><span>Target banks</span><strong id="lab-target">0</strong><small id="lab-target-rate">0% of campaigns</small></article>
       <article class="card"><span>Newest-bullet exits</span><strong id="lab-fails">0</strong><small id="lab-fail-rate">0% of campaigns</small></article>
       <article class="card"><span>First-bullet quick cuts</span><strong id="lab-quick-cuts">0</strong><small id="lab-quick-cut-rate">0% of campaigns</small></article>
+      <article class="card"><span>Peak-protected exits</span><strong id="lab-peak-exits">0</strong><small id="lab-peak-exit-rate">0% of campaigns</small></article>
     </section>
 
     <section class="controls panel">

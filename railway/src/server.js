@@ -12,6 +12,8 @@ import { TwelveDataClient } from './twelve-data.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const publicDir = path.join(__dirname, '..', 'public');
 const settingsFile = path.join(config.dataDir, `${config.dataNamespace}-settings.json`);
+const settingsBackupFile = path.join(config.dataDir, `${config.dataNamespace}-settings.backup.json`);
+let settingsNeedsEaRecovery = false;
 const store = new JsonlStore(config.dataDir, config.dataNamespace);
 const features = new LiveFeatureEngine();
 const contexts = {};
@@ -25,6 +27,7 @@ let mt5 = {
   positionCount: 0, pendingCount: 0, campaignId: '', campaignCurrentSide: 'NONE',
   campaignBuyLegs: 0, campaignSellLegs: 0, campaignBuyBulletsFired: 0, campaignSellBulletsFired: 0, uniqueBulletsFired: 0, heartbeatSequence: 0, floatingProfit: 0, peakBasketProfit: 0,
   dailyLossEnabled: false, dailyLossMoney: 20, dailyLossPnl: 0, dailyLossRemaining: 20, dailyLossBlocked: false, dailyLossResetAt: 0,
+  basketPeakProtectionEnabled: false, basketPeakActivationMoney: 4.0, basketPeakGivebackMoney: 1.0, basketPeakProtectionArmed: false, basketPeakProtectionFloor: 0,
   engineState: 'WAITING FOR MT5', lastSeenAt: null, lastEvent: 'Waiting for MT5 EA', lastHttpStatus: 'Not connected'
 };
 let control = { autonomous: config.autonomousAtStart, emergency: false };
@@ -33,27 +36,42 @@ let command = { id: 0, action: 'NONE', createdAt: null, consumedAt: null, result
 function defaultSettings() {
   return {
     version: 1,
-    profitTargetEnabled: false,
-    profitTargetMoney: 7,
+    profitTargetEnabled: true,
+    profitTargetMoney: 5,
     dailyLossEnabled: false,
     dailyLossMoney: 20,
     dailyLossResetAtMs: 0,
+    basketPeakProtectionEnabled: true,
+    basketPeakActivationMoney: 4.00,
+    basketPeakGivebackMoney: 1.00,
     updatedAt: nowIso()
   };
 }
 function loadSettings() {
-  try {
-    if (!fs.existsSync(settingsFile)) return defaultSettings();
-    const parsed = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
-    return normaliseSettings(parsed, false);
-  } catch (error) {
-    console.error('Could not load settings:', error.message);
-    return defaultSettings();
+  const candidates = [settingsFile, settingsBackupFile];
+  for (const candidate of candidates) {
+    try {
+      if (!fs.existsSync(candidate)) continue;
+      const parsed = JSON.parse(fs.readFileSync(candidate, 'utf8'));
+      const value = normaliseSettings(parsed, false);
+      settingsNeedsEaRecovery = false;
+      return value;
+    } catch (error) {
+      console.error(`Could not load ${path.basename(candidate)}:`, error.message);
+    }
   }
+  settingsNeedsEaRecovery = true;
+  return defaultSettings();
 }
 function saveSettings(value) {
   fs.mkdirSync(config.dataDir, { recursive: true });
-  fs.writeFileSync(settingsFile, `${JSON.stringify(value, null, 2)}\n`, 'utf8');
+  const payload = `${JSON.stringify(value, null, 2)}
+`;
+  const temporary = `${settingsFile}.tmp`;
+  fs.writeFileSync(temporary, payload, 'utf8');
+  fs.renameSync(temporary, settingsFile);
+  fs.writeFileSync(settingsBackupFile, payload, 'utf8');
+  settingsNeedsEaRecovery = false;
 }
 function settingBoolean(input, key, fallback) {
   if (!(key in input) || input[key] === undefined || input[key] === null || input[key] === '') return Boolean(fallback);
@@ -62,13 +80,18 @@ function settingBoolean(input, key, fallback) {
 
 export function normaliseSettings(input = {}, increment = true, current = defaultSettings()) {
   const targetEnabled = settingBoolean(input, 'profitTargetEnabled', current.profitTargetEnabled ?? false);
-  const targetRaw = Number(input.profitTargetMoney ?? current.profitTargetMoney ?? 7);
-  const targetMoney = Number.isFinite(targetRaw) ? Math.min(100_000, Math.max(0.01, targetRaw)) : 7;
+  const targetRaw = Number(input.profitTargetMoney ?? current.profitTargetMoney ?? 5);
+  const targetMoney = Number.isFinite(targetRaw) ? Math.min(100_000, Math.max(0.01, targetRaw)) : 5;
   const dailyLossEnabled = settingBoolean(input, 'dailyLossEnabled', current.dailyLossEnabled ?? false);
   const dailyLossRaw = Number(input.dailyLossMoney ?? current.dailyLossMoney ?? 20);
   const dailyLossMoney = Number.isFinite(dailyLossRaw) ? Math.min(100_000, Math.max(0.01, dailyLossRaw)) : 20;
   const resetRaw = Number(input.dailyLossResetAtMs ?? current.dailyLossResetAtMs ?? 0);
   const dailyLossResetAtMs = Number.isFinite(resetRaw) ? Math.max(0, Math.trunc(resetRaw)) : 0;
+  const basketPeakProtectionEnabled = settingBoolean(input, 'basketPeakProtectionEnabled', current.basketPeakProtectionEnabled ?? true);
+  const peakActivationRaw = Number(input.basketPeakActivationMoney ?? current.basketPeakActivationMoney ?? 4.00);
+  const basketPeakActivationMoney = Number.isFinite(peakActivationRaw) ? Math.min(100_000, Math.max(0.01, peakActivationRaw)) : 4.00;
+  const peakGivebackRaw = Number(input.basketPeakGivebackMoney ?? current.basketPeakGivebackMoney ?? 1.00);
+  const basketPeakGivebackMoney = Number.isFinite(peakGivebackRaw) ? Math.min(100_000, Math.max(0.01, peakGivebackRaw)) : 1.00;
   return {
     version: increment ? integer(current.version, 0) + 1 : Math.max(1, integer(input.version, 1)),
     profitTargetEnabled: targetEnabled,
@@ -76,10 +99,140 @@ export function normaliseSettings(input = {}, increment = true, current = defaul
     dailyLossEnabled,
     dailyLossMoney: round(dailyLossMoney, 2),
     dailyLossResetAtMs,
+    basketPeakProtectionEnabled,
+    basketPeakActivationMoney: round(basketPeakActivationMoney, 2),
+    basketPeakGivebackMoney: round(basketPeakGivebackMoney, 2),
     updatedAt: nowIso()
   };
 }
 let settings = loadSettings();
+
+function recoverSettingsFromHeartbeat(body = {}) {
+  if (!settingsNeedsEaRecovery) return false;
+  if (!(('profitTargetEnabled' in body) && ('profitTargetMoney' in body))) return false;
+  settings = normaliseSettings({
+    version: Math.max(1, integer(body.settingsVersion, settings.version)),
+    profitTargetEnabled: body.profitTargetEnabled,
+    profitTargetMoney: body.profitTargetMoney,
+    dailyLossEnabled: body.dailyLossEnabled,
+    dailyLossMoney: body.dailyLossMoney,
+    dailyLossResetAtMs: body.dailyLossResetAt,
+    basketPeakProtectionEnabled: body.basketPeakProtectionEnabled,
+    basketPeakActivationMoney: body.basketPeakActivationMoney,
+    basketPeakGivebackMoney: body.basketPeakGivebackMoney
+  }, false, settings);
+  saveSettings(settings);
+  store.event('settings', 'Recovered persistent controls from MT5 after missing server settings file', settings);
+  return true;
+}
+
+function campaignKey(row = {}) { return String(row.campaignId || row.id || '').trim(); }
+function positionKey(row = {}) { return String(row.positionId || row.positionIdentifier || row.ticket || '').trim(); }
+
+function inferCampaignId(input = {}) {
+  const supplied = campaignKey(input);
+  if (supplied) return supplied;
+  const position = positionKey(input);
+  if (position) {
+    const linked = store.all('legs').find(row => positionKey(row) === position && campaignKey(row));
+    if (linked) return campaignKey(linked);
+  }
+  if (mt5.campaignId) return String(mt5.campaignId);
+  const latestLadder = store.all('ladders')[0];
+  return campaignKey(latestLadder);
+}
+
+function legSummary(campaignId) {
+  const id = String(campaignId || '');
+  const opens = store.all('legs').filter(row => campaignKey(row) === id && String(row.action || '').toUpperCase() === 'OPEN');
+  const byPosition = new Map();
+  for (const row of opens) {
+    const key = positionKey(row) || String(row.id || '');
+    if (key && !byPosition.has(key)) byPosition.set(key, row);
+  }
+  const unique = [...byPosition.values()];
+  return {
+    uniqueBulletsFired: unique.length,
+    buyBullets: unique.filter(row => String(row.side || '').toUpperCase() === 'BUY').length,
+    sellBullets: unique.filter(row => String(row.side || '').toUpperCase() === 'SELL').length
+  };
+}
+
+export function normaliseBasketRecord(input = {}) {
+  const campaignId = campaignKey(input);
+  const summary = campaignId ? legSummary(campaignId) : { uniqueBulletsFired: 0, buyBullets: 0, sellBullets: 0 };
+  const reported = Math.max(integer(input.uniqueBulletsFired ?? input.positionsOpened), summary.uniqueBulletsFired);
+  const buyBullets = Math.max(integer(input.buyBullets), summary.buyBullets);
+  const sellBullets = Math.max(integer(input.sellBullets), summary.sellBullets);
+  const netProfit = finite(input.netProfit);
+  const peakBasketProfit = Math.max(finite(input.peakBasketProfit), netProfit);
+  return {
+    ...input,
+    id: input.id || campaignId,
+    campaignId,
+    positionsOpened: reported,
+    uniqueBulletsFired: reported,
+    buyBullets,
+    sellBullets,
+    peakBasketProfit: round(peakBasketProfit, 2),
+    profitGiveback: round(Math.max(0, peakBasketProfit - netProfit), 2)
+  };
+}
+
+function reconcileBasketForCampaign(campaignId) {
+  const id = String(campaignId || '');
+  if (!id) return null;
+  const existing = store.all('baskets').find(row => campaignKey(row) === id);
+  if (!existing) return null;
+  const normalised = normaliseBasketRecord(existing);
+  const changed = ['positionsOpened','uniqueBulletsFired','buyBullets','sellBullets','peakBasketProfit','profitGiveback']
+    .some(key => String(existing[key] ?? '') !== String(normalised[key] ?? ''));
+  return changed ? store.upsert('baskets', normalised) : existing;
+}
+
+function orderSnapshotId(campaignId, orderType, ladderLevel) {
+  return `${campaignId}-${String(orderType || '').toUpperCase()}-${String(ladderLevel).padStart(2, '0')}-PLACED`;
+}
+
+export function ladderOrderSnapshots(ladder = {}) {
+  const campaignId = campaignKey(ladder);
+  const lot = finite(ladder.lot, 0.01);
+  const at = ladder.at || Date.now();
+  const output = [];
+  const add = (side, prices) => {
+    if (!Array.isArray(prices)) return;
+    prices.forEach((price, index) => output.push({
+      id: orderSnapshotId(campaignId, `${side}_STOP`, index + 1),
+      campaignId,
+      eventSequence: integer(ladder.eventSequence) + index + 1,
+      account: ladder.account,
+      symbol: ladder.symbol,
+      version: ladder.version,
+      strategy: 'FIXED_LADDER_FLIGHT_RECORDER',
+      action: 'PLACED',
+      role: 'FIXED_LADDER_SNAPSHOT',
+      orderType: `${side}_STOP`,
+      ladderLevel: index + 1,
+      ticket: '',
+      volume: lot,
+      price: finite(price),
+      at,
+      reason: 'Reconstructed from confirmed ladder geometry; replaced by broker order record when received',
+      source: 'LADDER_SNAPSHOT'
+    }));
+  };
+  add('BUY', ladder.buyPrices);
+  add('SELL', ladder.sellPrices);
+  return output;
+}
+
+function ensureLadderOrderSnapshots(ladder) {
+  for (const snapshot of ladderOrderSnapshots(ladder)) {
+    if (!snapshot.campaignId) continue;
+    const existing = store.all('orders').find(row => String(row.id) === snapshot.id);
+    if (!existing) store.upsert('orders', snapshot);
+  }
+}
 
 function latestContext() { return combinedContext(contexts, config.primarySymbol); }
 function currentMt5(now = Date.now()) {
@@ -157,6 +310,7 @@ export function calculateLab(baskets, legs, protections) {
   const targetBanks = baskets.filter(row => String(row.exitReason || '').includes('PROFIT TARGET')).length;
   const newestFailures = baskets.filter(row => String(row.exitReason || '').includes('NEWEST BULLET')).length;
   const firstBulletQuickCuts = baskets.filter(row => String(row.exitReason || '').includes('FIRST BULLET QUICK CUT')).length;
+  const basketPeakProtectionExits = baskets.filter(row => String(row.exitReason || '').includes('BASKET PEAK PROTECTION')).length;
   const mixed = baskets.filter(row => String(row.side || '').toUpperCase() === 'MIXED').length;
   const beCount = protections.filter(row => String(row.action || '').toUpperCase() === 'BE_ACTIVATED').length;
   const mfe = closedLegs.map(row => finite(row.mfePrice)).filter(value => value >= 0);
@@ -170,6 +324,8 @@ export function calculateLab(baskets, legs, protections) {
     newestFailureRate: campaigns ? round(newestFailures / campaigns * 100, 1) : 0,
     firstBulletQuickCuts,
     firstBulletQuickCutRate: campaigns ? round(firstBulletQuickCuts / campaigns * 100, 1) : 0,
+    basketPeakProtectionExits,
+    basketPeakProtectionExitRate: campaigns ? round(basketPeakProtectionExits / campaigns * 100, 1) : 0,
     mixedCampaigns: mixed,
     mixedCampaignRate: campaigns ? round(mixed / campaigns * 100, 1) : 0,
     breakEvenActivations: beCount,
@@ -249,7 +405,7 @@ function overview() {
   const tickAgeMs = Number.isFinite(tickAt) ? Math.max(0, Date.now() - tickAt) : null;
   return {
     service: config.serviceName, version: config.version, mode: config.mode,
-    control, settings,
+    control, settings, settingsPersistence: { recoveredFromEaNeeded: settingsNeedsEaRecovery, primaryFile: path.basename(settingsFile), backupFile: path.basename(settingsBackupFile) },
     config: { primarySymbol: config.primarySymbol, timezone: config.timezone, dataNamespace: config.dataNamespace },
     twelveData: { ...twelveStatus, tickAgeMs, priceFresh: tickAgeMs !== null && tickAgeMs <= config.wsStaleMs, staleAfterMs: config.wsStaleMs },
     mt5: currentMt5(), feature: latestFeature, context: latestContext(),
@@ -318,6 +474,7 @@ function controlText() {
     `autonomous=${control.autonomous ? 'true' : 'false'}`,
     `emergency=${control.emergency ? 'true' : 'false'}`,
     `settings_version=${settings.version}`,
+    `settings_persisted=${settingsNeedsEaRecovery ? 'false' : 'true'}`,
     'fixed_lot=0.01',
     'use_equity_scaling=false',
     'equity_per_001_lot=1000',
@@ -326,6 +483,9 @@ function controlText() {
     `daily_loss_enabled=${settings.dailyLossEnabled ? 'true' : 'false'}`,
     `daily_loss_money=${settings.dailyLossMoney.toFixed(2)}`,
     `daily_loss_reset_at_ms=${Math.trunc(settings.dailyLossResetAtMs || 0)}`,
+    `basket_peak_protection_enabled=${settings.basketPeakProtectionEnabled ? 'true' : 'false'}`,
+    `basket_peak_activation_money=${settings.basketPeakActivationMoney.toFixed(2)}`,
+    `basket_peak_giveback_money=${settings.basketPeakGivebackMoney.toFixed(2)}`,
     'decision_id=LOCAL_FIXED_LADDER', 'decision_action=LOCAL', 'decision_direction=NONE',
     `server_now_ms=${Date.now()}`,
     'decision_reason=MT5 FIXED 8X8 LADDER CONTROLS ALL ENTRIES'
@@ -366,7 +526,10 @@ export function createHttpServer() {
         saveSettings(settings);
         const targetText = settings.profitTargetEnabled ? `profit target $${settings.profitTargetMoney.toFixed(2)}` : 'profit target OFF';
         const dailyText = settings.dailyLossEnabled ? `daily loss $${settings.dailyLossMoney.toFixed(2)}` : 'daily loss OFF';
-        store.event('settings', `${targetText} | ${dailyText}`, settings);
+        const peakText = settings.basketPeakProtectionEnabled
+          ? `peak protection ON at $${settings.basketPeakActivationMoney.toFixed(2)} with $${settings.basketPeakGivebackMoney.toFixed(2)} giveback`
+          : 'peak protection OFF';
+        store.event('settings', `${targetText} | ${dailyText} | ${peakText}`, settings);
         return send(response, 200, { ok: true, settings });
       }
       if (pathname === '/api/daily-loss/reset' && request.method === 'POST') {
@@ -376,6 +539,7 @@ export function createHttpServer() {
         return send(response, 200, { ok: true, settings });
       }
       if (pathname === '/api/ea/heartbeat' && request.method === 'POST') {
+        recoverSettingsFromHeartbeat(body);
         mt5 = {
           ...mt5, ...body,
           bid: finite(body.bid, mt5.bid), ask: finite(body.ask, mt5.ask), spreadPoints: finite(body.spreadPoints, mt5.spreadPoints),
@@ -390,12 +554,21 @@ export function createHttpServer() {
           algoAllowed: String(body.algoAllowed) === 'true' || body.algoAllowed === true,
           autonomous: String(body.autonomous) === 'true' || body.autonomous === true,
           profitTargetEnabled: String(body.profitTargetEnabled) === 'true' || body.profitTargetEnabled === true,
+          profitTargetMoney: finite(body.profitTargetMoney, mt5.profitTargetMoney),
+          campaignProfitTargetEnabled: String(body.campaignProfitTargetEnabled) === 'true' || body.campaignProfitTargetEnabled === true,
+          campaignProfitTargetMoney: finite(body.campaignProfitTargetMoney, mt5.campaignProfitTargetMoney),
+          settingsVersion: integer(body.settingsVersion, mt5.settingsVersion),
           dailyLossEnabled: String(body.dailyLossEnabled) === 'true' || body.dailyLossEnabled === true,
           dailyLossMoney: finite(body.dailyLossMoney, mt5.dailyLossMoney),
           dailyLossPnl: finite(body.dailyLossPnl, mt5.dailyLossPnl),
           dailyLossRemaining: finite(body.dailyLossRemaining, mt5.dailyLossRemaining),
           dailyLossBlocked: String(body.dailyLossBlocked) === 'true' || body.dailyLossBlocked === true,
           dailyLossResetAt: finite(body.dailyLossResetAt, mt5.dailyLossResetAt),
+          basketPeakProtectionEnabled: String(body.basketPeakProtectionEnabled) === 'true' || body.basketPeakProtectionEnabled === true,
+          basketPeakActivationMoney: finite(body.basketPeakActivationMoney, mt5.basketPeakActivationMoney),
+          basketPeakGivebackMoney: finite(body.basketPeakGivebackMoney, mt5.basketPeakGivebackMoney),
+          basketPeakProtectionArmed: String(body.basketPeakProtectionArmed) === 'true' || body.basketPeakProtectionArmed === true,
+          basketPeakProtectionFloor: finite(body.basketPeakProtectionFloor, mt5.basketPeakProtectionFloor),
           lastSeenAt: nowIso()
         };
         if (integer(body.consumedCommandId) >= command.id && command.id > 0) {
@@ -409,11 +582,19 @@ export function createHttpServer() {
         ladder: 'ladders', replay: 'replay', 'bullet-protection': 'protections'
       };
       for (const [route, collection] of Object.entries(collectionRoutes)) {
-        if (pathname === `/api/ea/${route}` && request.method === 'POST') {
-          const record = route === 'basket' || route === 'ladder' ? store.upsert(collection, body) : store.append(collection, body, route);
-          if (route === 'basket') store.event('basket', `${record.side || 'CAMPAIGN'} closed ${finite(record.netProfit).toFixed(2)}`, { campaignId: record.campaignId, exitReason: record.exitReason });
-          return send(response, 200, { ok: true, id: record.id });
+        if (pathname !== `/api/ea/${route}` || request.method !== 'POST') continue;
+        const campaignId = inferCampaignId(body);
+        let input = campaignId ? { ...body, campaignId } : { ...body };
+        if (route === 'basket') input = normaliseBasketRecord(input);
+        const useUpsert = ['basket','ladder','leg','order','bank','replay','bullet-protection','signal'].includes(route) && Boolean(input.id);
+        const record = useUpsert ? store.upsert(collection, input) : store.append(collection, input, route);
+        if (route === 'ladder') ensureLadderOrderSnapshots(record);
+        if (route === 'leg') reconcileBasketForCampaign(record.campaignId);
+        if (route === 'basket') {
+          reconcileBasketForCampaign(record.campaignId);
+          store.event('basket', `${record.side || 'CAMPAIGN'} closed ${finite(record.netProfit).toFixed(2)}`, { campaignId: record.campaignId, exitReason: record.exitReason });
         }
+        return send(response, 200, { ok: true, id: record.id });
       }
       if (pathname === '/api/ea/scan' && request.method === 'POST') return send(response, 200, { ok: true, id: store.append('scans', { ...body, source: 'MT5' }, 'scan').id });
       if (pathname === '/api/ea/event' && request.method === 'POST') return send(response, 200, { ok: true, id: store.event(body.type || 'ea', body.message || 'EA event', body.data || null).id });

@@ -1,85 +1,42 @@
-# Flight recorder, audit and CSV exports
+# History and CSV recording — v2.61
 
-The data namespace remains `v220` so the existing history is preserved across the v2.50 deployment.
+The data namespace remains `v220`, so the existing Railway history remains in the same collection names. Do not change `DATA_DIR`, delete the Railway volume, or change `BULLET_DATA_NAMESPACE` during deployment.
 
-## Campaign-wide sequence
+## Exports
 
-Every important event carries:
+- Campaigns CSV
+- Bullets CSV
+- BE events CSV
+- Ladders CSV
+- Replay CSV
+- Orders CSV
+- Banking CSV
+- Market telemetry CSV
 
-- `campaignId`
-- `eventSequence`
-- event time
-- action
-- side
-- bullet number or ticket where relevant
-- reason
+## v2.61 consistency rules
 
-This sequence allows the dashboard to reconstruct the exact order of ladder placement, pending-order actions, bullet entries, BE protection, exits, banking and campaign completion.
+- Every record uses a campaign ID.
+- Close-leg records recover campaign identity from their position identifier when necessary.
+- Bullet counts are reconciled from unique OPEN position identifiers.
+- Basket peak is forced to be at least the realised P/L.
+- Giveback is recalculated as peak minus realised P/L.
+- Every ladder creates 16 deterministic placement records.
+- Duplicate record IDs are de-duplicated in memory after restart.
+- Settings are snapshotted and versioned per campaign.
 
-## Campaigns CSV
+## Persistent controls
 
-Campaign ID, anchor, start/end, duration, unique BUY and SELL bullet counts, maximum simultaneous positions, target mode, net result, peak, MAE, giveback, exit reason and counting method.
+Railway writes both `v220-settings.json` and `v220-settings.backup.json` atomically under `DATA_DIR`. MT5 also stores the latest settings in terminal Global Variables and can restore Railway controls if both server files are missing.
 
-## Bullets CSV
+## Basket peak fields
 
-Every unique bullet OPEN and CLOSE record with side, bullet number, position identifier, ticket, entry/exit price, initial SL, final SL, BE activation, time to BE, MFE, MAE, P/L, precise close reason and campaign exit context.
+Campaigns and replay include:
 
-The expected SL labels are:
+- `basketPeakProtectionEnabled`
+- `basketPeakActivationMoney`
+- `basketPeakGivebackMoney`
+- `basketPeakProtectionArmed`
+- `basketPeakProtectionFloor`
+- `settingsVersion`
 
-- `INITIAL STOP LOSS`
-- `BE PROTECTED STOP - BULLET ONLY`
-
-## BE Events CSV
-
-Every halfway protection event with campaign, sequence, bullet, entry, new SL, progress, trigger and buffer.
-
-## Ladders CSV
-
-Every campaign anchor plus all 8 BUY STOP and 8 SELL STOP prices, spacing, lot, fallback, BE geometry and true build reason.
-
-Normal build reasons include:
-
-- `EA START - IMMEDIATE REARM`
-- `CAMPAIGN COMPLETE - <reason>`
-- `LADDER MISSING - REPAIR`
-- `DASHBOARD REBUILD REQUEST`
-
-`OPTIONAL M1 REFRESH` appears only when that input is deliberately enabled.
-
-## Replay CSV
-
-Timed broker snapshots containing bid, ask, spread, floating and peak P/L, live positions, pending orders, unique bullets fired, BUY/SELL bullet totals, newest bullet and the last event.
-
-## Orders CSV
-
-Every pending-order placement, rejection and cancellation with campaign ID, event sequence, role, side, ticket, volume, price and reason.
-
-## Banking CSV
-
-Every campaign close decision, including profit target, sentinel failure, hard protection or manual close.
-
-## Market Telemetry CSV
-
-Twelve Data and MT5 context used only for later analysis. It does not block ladder entries.
-
-## Campaign audit
-
-The server checks each completed campaign against its leg records:
-
-- `CONSISTENT`: reported bullet total matches unique OPEN position identifiers and all expected CLOSE records are present.
-- `SYNCING CLOSE RECORDS`: the total is correct but some close events are still arriving.
-- `COUNT MISMATCH`: the campaign total differs from the unique OPEN bullet records.
-- `NO BULLET RECORDS`: no usable bullet records exist for that campaign.
-
-## Replay page
-
-Selecting a campaign shows:
-
-1. The exact event timeline ordered by `eventSequence` and time.
-2. The price and basket P/L snapshots for the same campaign.
-
-This lets one campaign be reviewed without guessing from disconnected CSV rows.
-
-## v2.50 first-bullet quick-cut tracking
-
-The protection export now also records `FIRST_BULLET_QUICK_CUT_ARMED`. Campaign and bullet close reasons distinguish `FIRST BULLET QUICK CUT STOP` from `FIRST BULLET QUICK CUT MARKET EXIT`. Campaign history records `FIRST BULLET QUICK CUT 0.750 ADVERSE - CLOSE FULL CAMPAIGN` when the rule ends a campaign.
+Default v2.61 values are activation $4.00 and giveback $1.00.
